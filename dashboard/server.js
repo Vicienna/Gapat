@@ -52,7 +52,7 @@ app.use((req, res, next) => {
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const DISCORD_OWNER_ID = process.env.DISCORD_OWNER_ID || '';
-const DASHBOARD_URL = process.env.DASHBOARD_URL || `http://localhost:${PORT}`;
+const DASHBOARD_URL = (process.env.DASHBOARD_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
 
 const DISCORD_REDIRECT_URI = `${DASHBOARD_URL}/api/auth/discord/callback`;
 
