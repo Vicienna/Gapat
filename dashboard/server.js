@@ -33,7 +33,7 @@ if (!process.env.DASHBOARD_SECRET || process.env.DASHBOARD_SECRET.length < 32) {
   process.exit(1);
 }
 const SECRET = process.env.DASHBOARD_SECRET;
-const BOT_API = `http://localhost:${process.env.BOT_API_PORT || 3001}`;
+const BOT_API = process.env.BOT_API_URL || `http://localhost:${process.env.BOT_API_PORT || 3001}`;
 if (!process.env.INTERNAL_API_SECRET || process.env.INTERNAL_API_SECRET.length < 16) {
   console.error('[FATAL] INTERNAL_API_SECRET must be set and at least 16 characters long. Refusing to start.');
   process.exit(1);

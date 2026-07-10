@@ -2,10 +2,10 @@ services:
   - type: web
     name: gapat-bot
     runtime: node
-    repo: https://github.com/your-repo/gapat-full
+    repo: https://github.com/Vicienna/Gapat.git
     branch: main
-    buildCommand: pip install ddgs && npm run build
-    startCommand: node dist/index.js
+    buildCommand: pip install ddgs && npm install && npm run build -w bot
+    startCommand: node bot/dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
@@ -30,3 +30,5 @@ services:
         sync: false
       - key: BOT_API_PORT
         value: 3100
+      - key: DASHBOARD_SECRET
+        sync: false
