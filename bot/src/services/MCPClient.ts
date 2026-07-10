@@ -338,8 +338,13 @@ export async function mcpSearch(query: string, maxResults = 5, userId?: string):
         }
         console.log(`[MCP] mcpSearch result: ${result?.substring(0, 100) || 'null'}`);
         if (result) {
-          searchCache.set(query, result);
-          return result;
+          // Check if result is actually useful — MCP may return "[]" or empty
+          const trimmed = result.trim();
+          if (trimmed !== '[]' && trimmed !== '""' && trimmed !== '' && trimmed !== 'null' && trimmed !== '{}') {
+            searchCache.set(query, result);
+            return result;
+          }
+          console.log(`[MCP] mcpSearch returned empty result, skipping`);
         }
       }
     } catch (e: any) {

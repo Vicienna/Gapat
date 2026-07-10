@@ -6,7 +6,7 @@ echo "=== Gapat Bot — Wispbyte Startup ==="
 
 # 1. Install Python deps
 echo "[1/4] Installing Python dependencies..."
-pip install ddgs 2>/dev/null || pip3 install ddgs 2>/dev/null || echo "Warning: ddgs install failed (MCP search may not work)"
+pip install duckduckgo_search 2>/dev/null || pip3 install duckduckgo_search 2>/dev/null || echo "Warning: duckduckgo_search install failed (MCP search may not work)"
 
 # 2. Install Node deps
 echo "[2/4] Installing Node dependencies..."
