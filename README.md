@@ -76,10 +76,31 @@ The bot runs on port 3001 (Bot API) and the dashboard on port 4567.
 
 ## Deployment
 
-### Bot (Render)
-- Build command: `pip install ddgs && npm run build`
-- Start command: `npm run start -w bot`
-- Set `PYTHON_VERSION=3.11` in environment
+### Bot (Wispbyte)
+
+1. Sign up at [wispbyte.com](https://wispbyte.com) and create a Node.js server
+
+2. Configure startup command in Wispbyte panel:
+   ```
+   bash start.wispbyte.sh
+   ```
+   Or manually:
+   ```
+   npm install && npm run build -w bot && npm run start -w bot
+   ```
+
+3. Set environment variables in Wispbyte panel:
+   - Copy from `env.wispbyte.txt`
+   - Fill in your Discord token, client secret, and DASHBOARD_URL
+
+4. Upload the project files via SFTP or panel file manager
+
+5. Install Python MCP deps (SSH/console):
+   ```bash
+   pip install ddgs
+   ```
+
+6. Start the server
 
 ### Dashboard (Vercel)
 - Framework: Other
