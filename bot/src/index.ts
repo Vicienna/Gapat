@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env') });
-import { Client, GatewayIntentBits, Events, ActivityType, ContainerBuilder, MessageFlags } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ActivityType, EmbedBuilder, ContainerBuilder, MessageFlags } from 'discord.js';
 import { connectDB } from './db';
 import { encrypt } from './services/Encryption';
 import { Provider } from './models/Provider';
@@ -151,6 +151,36 @@ client.once(Events.ClientReady, async (c) => {
     activities: [{ name: '/help', type: ActivityType.Listening }],
     status: 'online',
   });
+
+  // Startup log: send server stats to configured channel
+  const logChannelId = process.env.STARTUP_LOG_CHANNEL;
+  if (logChannelId) {
+    try {
+      const channel = await client.channels.fetch(logChannelId).catch(() => null);
+      if (channel?.isTextBased() && 'send' in channel) {
+        const guilds = client.guilds.cache;
+        let totalMembers = 0;
+        const topGuilds: { name: string; members: number; owner: string }[] = [];
+        for (const g of guilds.values()) {
+          totalMembers += g.memberCount;
+          if (topGuilds.length < 20) {
+            const owner = await g.fetchOwner().catch(() => null);
+            topGuilds.push({ name: g.name, members: g.memberCount, owner: owner?.user.username || '?' });
+          }
+        }
+        topGuilds.sort((a, b) => b.members - a.members);
+        const list = topGuilds.map(g => `**${g.name}** — ${g.members} members (owner: ${g.owner})`).join('\n');
+        await channel.send({
+          embeds: [new EmbedBuilder()
+            .setColor(0x22c55e)
+            .setTitle('🟢 Gapat Bot Online')
+            .setDescription(`**${guilds.size}** servers · **${totalMembers}** total members\n\n${list}${guilds.size > 20 ? `\n\n*...and ${guilds.size - 20} more*` : ''}`)
+            .setTimestamp()
+          ],
+        });
+      }
+    } catch {}
+  }
 
   // Auto-leave: check every hour for servers that haven't been set up within 24 hours
   setInterval(async () => {
