@@ -6,11 +6,12 @@ import { connectDB } from './db';
 import { encrypt } from './services/Encryption';
 import { Provider } from './models/Provider';
 import { MCPServer } from './models/MCPServer';
+import { Channel } from './models/Channel';
+import { getServersToLeave, clearLeaveTimer } from './models/Broadcast';
 import { EMOJI } from './constants/emoji';
 import { handlePanel, handlePanelComponent } from './commands/panel';
 import { handleMe, handleMeComponent, handleMeModal } from './commands/me';
 import { handleHelp, handleHelpComponent } from './commands/help';
-import { handleEmoji } from './commands/emoji';
 import { handleMessage } from './events/messageCreate';
 import { handleGuildCreate, handleGuildDelete } from './events/guildEvents';
 import { createApiServer } from './api/server';
@@ -149,6 +150,28 @@ client.once(Events.ClientReady, async (c) => {
     activities: [{ name: '/help', type: ActivityType.Listening }],
     status: 'online',
   });
+
+  // Auto-leave: check every hour for servers that haven't been set up within 24 hours
+  setInterval(async () => {
+    try {
+      const servers = await getServersToLeave();
+      for (const { guildId } of servers) {
+        const channelCount = await Channel.countDocuments({ guildId, isEnabled: true });
+        if (channelCount === 0) {
+          const guild = client.guilds.cache.get(guildId);
+          if (guild) {
+            console.log(`[AutoLeave] Leaving guild ${guildId} (${guild.name}) — not set up within 24h`);
+            try { await guild.leave(); } catch (e: any) { console.error(`[AutoLeave] Failed to leave ${guildId}:`, e.message); }
+          }
+        } else {
+          // Server got configured, clear the leave timer
+          await clearLeaveTimer(guildId);
+        }
+      }
+    } catch (e: any) {
+      console.error('[AutoLeave] Check failed:', e.message);
+    }
+  }, 60 * 60 * 1000); // every hour
 });
 
 client.on(Events.GuildCreate, handleGuildCreate);
@@ -161,15 +184,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
         case 'panel': await handlePanel(interaction); break;
         case 'me': await handleMe(interaction); break;
         case 'help': await handleHelp(interaction); break;
-        case 'deploy-emoji': await handleEmoji(interaction); break;
       }
     } else if (interaction.isButton()) {
       if (interaction.customId.startsWith('panel_')) await handlePanelComponent(interaction);
       else if (interaction.customId.startsWith('me_')) await handleMeComponent(interaction);
       else if (interaction.customId.startsWith('help_')) await handleHelpComponent(interaction);
-      else if (interaction.customId === 'emoji_close') {
-        try { await interaction.deferUpdate(); await interaction.editReply({ components: [new ContainerBuilder().setAccentColor(0x5865F2).addTextDisplayComponents(t => t.setContent(`${EMOJI.CLOSE} Closed`))], flags: MessageFlags.IsComponentsV2 }); } catch { }
-      }
     } else if (interaction.isModalSubmit()) {
       if (interaction.customId.startsWith('panel_')) await handlePanelComponent(interaction);
       else if (interaction.customId.startsWith('me_')) await handleMeModal(interaction);

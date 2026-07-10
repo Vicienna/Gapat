@@ -5,6 +5,7 @@ import { Guild } from '../models/Guild';
 import { Conversation } from '../models/Conversation';
 import { MCPServer } from '../models/MCPServer';
 import { checkCooldown } from '../models/Cooldown';
+import { hasReceivedBroadcast, markBroadcastReceived, startLeaveTimer } from '../models/Broadcast';
 import { checkLogin } from '../services/UserService';
 import { checkAndIncrement } from '../services/RateLimit';
 import { generateAIResponse, estimateTokens } from '../services/AIProvider';
@@ -12,6 +13,7 @@ import { webSearch } from '../services/WebSearch';
 import { connectSystemMCP, callTool } from '../services/MCPClient';
 import { getGlobalSettings } from '../models/GlobalSettings';
 import { DISCORD_MARKDOWN_PROMPT } from '../constants/systemPrompts';
+import { clearLeaveTimer } from '../models/Broadcast';
 
 // ─── Dynamic Regex Tool Registry ───────────────────────────────
 // Auto-discovers tools from all enabled MCP servers.
@@ -179,9 +181,6 @@ web_search("weather in Tokyo")
 export async function handleMessage(message: Message) {
   if (message.author.bot || !message.inGuild() || message.system) return;
 
-  const channelConfig = await Channel.findOne({ guildId: message.guildId!, channelId: message.channelId });
-  if (!channelConfig || !channelConfig.isEnabled) return;
-
   const isLoggedIn = await checkLogin(message.author.id);
   if (!isLoggedIn) {
     const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:4567';
@@ -209,6 +208,48 @@ export async function handleMessage(message: Message) {
     setTimeout(() => cooldownMsg.delete().catch(() => {}), 5000);
     return;
   }
+
+  // ─── Broadcast (active until July 30, 2026) ────────────────────
+  const BROADCAST_EXPIRY = new Date('2026-07-30T00:00:00Z');
+  if (Date.now() < BROADCAST_EXPIRY.getTime()) {
+    try {
+      const alreadyReceived = await hasReceivedBroadcast(message.author.id);
+      if (!alreadyReceived) {
+        const guildId = message.guildId!;
+        const member = message.member;
+        const isAdmin = member?.permissions.has(PermissionFlagsBits.ManageGuild) ?? false;
+
+        if (isAdmin) {
+          const adminMsg = await message.reply({
+            embeds: [new EmbedBuilder()
+              .setColor(0x6366f1)
+              .setDescription(
+                '**Gapat is back online!** Let\'s set up.\n\n' +
+                'Use ` /help` to get started with setup.\n\n' +
+                '-# If Gapat is not set up within **24 hours**, it will leave this server automatically.'
+              )
+              .setTimestamp()
+            ],
+          });
+          await startLeaveTimer(guildId);
+        } else {
+          const userMsg = await message.reply({
+            embeds: [new EmbedBuilder()
+              .setColor(0xf59e0b)
+              .setDescription('**Gapat is back online!** Contact the server admin to complete the setup.')
+              .setTimestamp()
+            ],
+          });
+          setTimeout(() => userMsg.delete().catch(() => {}), 15000);
+        }
+
+        await markBroadcastReceived(message.author.id, guildId);
+      }
+    } catch {}
+  }
+
+  const channelConfig = await Channel.findOne({ guildId: message.guildId!, channelId: message.channelId });
+  if (!channelConfig || !channelConfig.isEnabled) return;
 
   const me = message.guild?.members.me;
   if (!me) return;
