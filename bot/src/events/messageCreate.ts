@@ -235,8 +235,10 @@ export async function handleMessage(message: Message) {
                 .setDescription('**Gapat is back online!** Contact the server admin to complete the setup.')
                 .setTimestamp();
 
-          const broadcastMsg = await message.reply({ embeds: [broadcastEmbed] });
-          setTimeout(() => broadcastMsg.delete().catch(() => {}), 30000);
+          await message.author.send({ embeds: [broadcastEmbed] }).catch(() => {
+            // DM failed (user has DMs disabled) — send in-channel with auto-delete as fallback
+            message.reply({ embeds: [broadcastEmbed] }).then(m => setTimeout(() => m.delete().catch(() => {}), 30000));
+          });
           if (isAdmin) await startLeaveTimer(guildId);
 
           await markBroadcastReceived(message.author.id, guildId);
