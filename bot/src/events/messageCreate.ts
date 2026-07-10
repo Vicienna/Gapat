@@ -213,54 +213,57 @@ export async function handleMessage(message: Message) {
   const BROADCAST_EXPIRY = new Date('2026-07-30T00:00:00Z');
   if (Date.now() < BROADCAST_EXPIRY.getTime()) {
     try {
-      const alreadyReceived = await hasReceivedBroadcast(message.author.id);
-      if (!alreadyReceived) {
-        const guildId = message.guildId!;
-        const member = message.member;
-        const isAdmin = member?.permissions.has(PermissionFlagsBits.ManageGuild) ?? false;
+      const guildId = message.guildId!;
+      const setupChannels = await Channel.countDocuments({ guildId, isEnabled: true });
+      if (setupChannels === 0) {
+        const alreadyReceived = await hasReceivedBroadcast(message.author.id);
+        if (!alreadyReceived) {
+          const member = message.member;
+          const isAdmin = member?.permissions.has(PermissionFlagsBits.ManageGuild) ?? false;
 
-        const broadcastEmbed = isAdmin
-          ? new EmbedBuilder()
-              .setColor(0x6366f1)
-              .setDescription(
-                '**Gapat is back online!** Let\'s set up.\n\n' +
-                'Use ` /help` to get started with setup.\n\n' +
-                '-# If Gapat is not set up within **24 hours**, it will leave this server automatically.'
-              )
-              .setTimestamp()
-          : new EmbedBuilder()
-              .setColor(0xf59e0b)
-              .setDescription('**Gapat is back online!** Contact the server admin to complete the setup.')
-              .setTimestamp();
+          const broadcastEmbed = isAdmin
+            ? new EmbedBuilder()
+                .setColor(0x6366f1)
+                .setDescription(
+                  '**Gapat is back online!** Let\'s set up.\n\n' +
+                  'Use ` /help` to get started with setup.\n\n' +
+                  '-# If Gapat is not set up within **24 hours**, it will leave this server automatically.'
+                )
+                .setTimestamp()
+            : new EmbedBuilder()
+                .setColor(0xf59e0b)
+                .setDescription('**Gapat is back online!** Contact the server admin to complete the setup.')
+                .setTimestamp();
 
-        const broadcastMsg = await message.reply({ embeds: [broadcastEmbed] });
-        setTimeout(() => broadcastMsg.delete().catch(() => {}), 30000);
-        if (isAdmin) await startLeaveTimer(guildId);
+          const broadcastMsg = await message.reply({ embeds: [broadcastEmbed] });
+          setTimeout(() => broadcastMsg.delete().catch(() => {}), 30000);
+          if (isAdmin) await startLeaveTimer(guildId);
 
-        await markBroadcastReceived(message.author.id, guildId);
+          await markBroadcastReceived(message.author.id, guildId);
 
-        // Log broadcast to configured channel
-        const logChannelId = process.env.STARTUP_LOG_CHANNEL;
-        if (logChannelId) {
-          try {
-            const guild = message.guild;
-            const logChannel = await message.client.channels.fetch(logChannelId).catch(() => null);
-            if (logChannel?.isTextBased() && 'send' in logChannel) {
-              await logChannel.send({
-                embeds: [new EmbedBuilder()
-                  .setColor(0x6366f1)
-                  .setTitle('📢 Broadcast Delivered')
-                  .addFields(
-                    { name: 'Server', value: guild?.name || 'Unknown', inline: true },
-                    { name: 'Members', value: guild?.memberCount?.toString() || '?', inline: true },
-                    { name: 'User', value: message.author.username, inline: true },
-                    { name: 'Role', value: isAdmin ? 'Admin' : 'Member', inline: true },
-                  )
-                  .setTimestamp()
-                ],
-              });
-            }
-          } catch {}
+          // Log broadcast to configured channel
+          const logChannelId = process.env.STARTUP_LOG_CHANNEL;
+          if (logChannelId) {
+            try {
+              const guild = message.guild;
+              const logChannel = await message.client.channels.fetch(logChannelId).catch(() => null);
+              if (logChannel?.isTextBased() && 'send' in logChannel) {
+                await logChannel.send({
+                  embeds: [new EmbedBuilder()
+                    .setColor(0x6366f1)
+                    .setTitle('Broadcast Delivered')
+                    .addFields(
+                      { name: 'Server', value: guild?.name || 'Unknown', inline: true },
+                      { name: 'Members', value: guild?.memberCount?.toString() || '?', inline: true },
+                      { name: 'User', value: message.author.username, inline: true },
+                      { name: 'Role', value: isAdmin ? 'Admin' : 'Member', inline: true },
+                    )
+                    .setTimestamp()
+                  ],
+                });
+              }
+            } catch {}
+          }
         }
       }
     } catch {}
