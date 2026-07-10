@@ -501,7 +501,7 @@ app.get('/api/public/stats', async (req, res) => {
 app.get('/api/public/config', (req, res) => {
   res.json({
     brandName: process.env.BRAND_NAME || 'Gapat Bot',
-    logoUrl: process.env.LOGO_URL || '',
+    logoUrl: process.env.LOGO_URL || '/img/logo.png',
   });
 });
 

@@ -182,6 +182,32 @@ client.once(Events.ClientReady, async (c) => {
     } catch {}
   }
 
+  // Check existing servers — leave small ones (<25 members)
+  const MIN_MEMBERS = 25;
+  for (const g of client.guilds.cache.values()) {
+    if (g.memberCount < MIN_MEMBERS) {
+      try {
+        const owner = await g.fetchOwner().catch(() => null);
+        if (owner) {
+          await owner.send({
+            embeds: [new EmbedBuilder()
+              .setColor(0xef4444)
+              .setTitle('Gapat Bot — Leaving Server')
+              .setDescription(
+                `I'm sorry, but your server **${g.name}** has **${g.memberCount} members**, which is below the minimum requirement of **${MIN_MEMBERS} members**.\n\n` +
+                'Gapat Bot is designed for communities with at least 25 members to ensure an active and engaging experience for everyone.\n\n' +
+                'Feel free to invite me back once your community grows! 🤍'
+              )
+              .setTimestamp()
+            ],
+          }).catch(() => {});
+        }
+        await g.leave();
+        console.log(`[Startup] Auto-left small server: ${g.name} (${g.id}) — ${g.memberCount} members`);
+      } catch {}
+    }
+  }
+
   // Auto-leave: check every hour for servers that haven't been set up within 24 hours
   setInterval(async () => {
     try {
