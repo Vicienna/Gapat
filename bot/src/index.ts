@@ -224,7 +224,7 @@ async function start() {
     process.exit(1);
   });
 
-  app.listen(port, () => {
+  app.listen(port, '0.0.0.0', () => {
     console.log(`API server running on port ${port}`);
   });
 
