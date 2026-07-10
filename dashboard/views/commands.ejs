@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Commands</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body style="background:var(--bg-base);color:var(--text-primary)" x-data="{}" x-init="$store.user.init()">
+ <script src="/js/app.js"></script>
+
+ <%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg hover:bg-[var(--hover-bg)]">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Bot Commands</h1>
+ </header>
+
+ <div class="flex-1 p-4 md:p-8">
+ <p class="mb-8" style="color:var(--text-secondary)">List of slash commands available in Gapat Bot</p>
+
+ <!-- General Commands -->
+ <div class="mb-8">
+ <div class="flex items-center gap-3 mb-6">
+ <div class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:rgb(52,211,153)">General</div>
+ </div>
+ <div class="space-y-4">
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-start gap-4">
+ <code class="px-3 py-1.5 rounded-lg font-mono text-sm font-semibold whitespace-nowrap shrink-0" style="background:var(--bg-surface);color:var(--accent)">/help</code>
+ <div>
+ <h3 class="font-semibold mb-1" style="color:var(--text-primary)">Show help and information</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Displays an interactive help message containing a list of all available commands, a quick start guide, and a link to the dashboard.</p>
+ </div>
+ </div>
+ </div>
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-start gap-4">
+ <code class="px-3 py-1.5 rounded-lg font-mono text-sm font-semibold whitespace-nowrap shrink-0" style="background:var(--bg-surface);color:var(--accent)">/me</code>
+ <div>
+ <h3 class="font-semibold mb-1" style="color:var(--text-primary)">View your profile and usage</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Shows your Discord profile including daily token usage, request limits, conversation memory count, and buttons to clear memory or open the dashboard.</p>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- Admin Commands -->
+ <div>
+ <div class="flex items-center gap-3 mb-6">
+ <div class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.3);color:rgb(251,191,36)">Admin</div>
+ </div>
+ <div class="space-y-4">
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-start gap-4">
+ <code class="px-3 py-1.5 rounded-lg font-mono text-sm font-semibold whitespace-nowrap shrink-0" style="background:var(--bg-surface);color:var(--accent)">/panel</code>
+ <div>
+ <h3 class="font-semibold mb-1" style="color:var(--text-primary)">Server admin panel</h3>
+ <p class="text-sm leading-relaxed mb-3" style="color:var(--text-secondary)">Server admin panel. Requires <code class="text-xs" style="color:var(--accent)">ManageGuild</code> permission. Features:</p>
+ <div class="grid sm:grid-cols-2 gap-2">
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-plus-circle text-emerald-400 text-xs"></i><span>Setup — Add AI channel</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-edit text-blue-400 text-xs"></i><span>Edit — Change channel prompt</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-list text-cyan-400 text-xs"></i><span>List — View all AI channels</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-trash text-red-400 text-xs"></i><span>Remove — Delete AI channel</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-sliders-h text-amber-400 text-xs"></i><span>Limits — Set daily limit</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-user-cog text-violet-400 text-xs"></i><span>User Limits — Limit per user</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-chart-simple text-rose-400 text-xs"></i><span>Stats — Usage statistics</span></div>
+ <div class="flex items-center gap-2 text-sm" style="color:var(--text-secondary)"><i class="fas fa-undo text-orange-400 text-xs"></i><span>Reset User — Reset user usage</span></div>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-start gap-4">
+ <code class="px-3 py-1.5 rounded-lg font-mono text-sm font-semibold whitespace-nowrap shrink-0" style="background:var(--bg-surface);color:var(--accent)">/deploy-emoji</code>
+ <div>
+ <h3 class="font-semibold mb-1" style="color:var(--text-primary)">Upload emoji images to server</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Reads PNG files from bot assets and creates them as custom emojis on the Discord server. Requires <code class="text-xs" style="color:var(--accent)">ManageGuildExpressions</code> permission. Displays a summary of emojis that were successfully created, skipped, or failed.</p>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <footer class="border-t px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <div class="flex items-center gap-4">
+ <a href="/privacy" style="color:var(--text-muted)" class="hover:no-underline">Privacy Policy</a>
+ <a href="/terms" style="color:var(--text-muted)" class="hover:no-underline">Terms of Service</a>
+ </div>
+ </footer>
+ </div>
+</body>
+</html>

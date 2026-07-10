@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Channels</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="channelsData()" x-init="init(); $store.user.init()" >
+ <script src="/js/app.js"></script>
+
+ <%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <a :href="'/servers/' + guildId" class="p-1.5 -ml-1 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-arrow-left"></i>
+ </a>
+ <div class="flex items-center gap-2 min-w-0">
+ <h1 class="text-xl font-bold truncate" x-text="guild?.name ? guild.name + ' — Channels' : 'Channels'" style="color:var(--text-primary)"></h1>
+ <span x-show="guild" class="hidden md:inline text-sm font-mono" x-text="guild.id" style="color:var(--text-muted)"></span>
+ </div>
+ <div class="ml-auto flex items-center gap-3">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium text-sm" style="color:var(--text-secondary)" x-text="$store.user.username"></span>
+ <span class="hidden sm:inline" style="color:var(--text-muted)">·</span>
+ <i class="fas fa-circle text-emerald-400 text-xs"></i>
+ <span class="hidden sm:inline" style="color:var(--text-secondary)">Online</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium">Admin</span>
+ <button @click="showAddModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-colors">
+ <i class="fas fa-plus"></i>
+ <span class="hidden sm:inline">Add Channel</span>
+ </button>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="loading" class="flex items-center justify-center py-20" style="display:none;color:var(--text-muted)">
+ <i class="fas fa-spinner fa-spin text-2xl mr-3"></i>
+ <span>Loading channels...</span>
+ </div>
+
+ <div x-show="!loading && error" class="border border-[var(--border-rose)] px-5 py-3 rounded-xl mb-6" x-text="error" style="display:none"></div>
+
+ <div x-show="!loading && !error && channels.length === 0" class="flex flex-col items-center justify-center py-20" style="display:none;color:var(--text-muted)">
+ <i class="fas fa-hashtag text-5xl mb-4" style="color:var(--text-muted)"></i>
+ <p class="text-lg font-medium" style="color:var(--text-secondary)">No AI channels configured</p>
+ <p class="text-sm mt-1">Add a channel to start managing AI conversations.</p>
+ <button @click="showAddModal = true" class="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-sm transition-colors">
+ <i class="fas fa-plus"></i>
+ <span>Add Channel</span>
+ </button>
+ </div>
+
+ <div x-show="!loading && !error && channels.length" class="hidden md:block overflow-hidden rounded-xl border" style="display:none;border-color:var(--border-color);background:var(--bg-surface)">
+ <table class="w-full text-sm">
+ <thead>
+ <tr style="background:var(--bg-elevated);border-bottom:1px solid var(--border-color)">
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Channel</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">ID</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Status</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Custom Prompt</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Messages</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Tokens</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Last Used</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-secondary)">Actions</th>
+ </tr>
+ </thead>
+ <tbody>
+ <template x-for="ch in channels" :key="ch.channelId">
+ <tr style="background:var(--bg-surface)">
+ <td class="px-4 py-3 font-medium font-mono text-xs" x-text="ch.channelName" style="color:var(--text-primary)">
+ <i class="fas fa-hashtag mr-1.5" style="color:var(--text-muted)"></i>
+ <span x-text="ch.channelName"></span>
+ </td>
+ <td class="px-4 py-3 font-mono text-xs" x-text="ch.channelId" style="color:var(--text-secondary)"></td>
+ <td class="px-4 py-3 text-center">
+ <button @click="toggleChannel(ch)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all" :class="ch.isEnabled ? '' : ''">
+ <i class="fas fa-circle text-[6px]" :class="ch.isEnabled ? 'text-emerald-400' : ''"></i>
+ <span x-text="ch.isEnabled ? 'Enabled' : 'Disabled'"></span>
+ </button>
+ </td>
+ <td class="px-4 py-3 max-w-[200px]">
+ <span x-text="ch.systemPrompt ? trunc(ch.systemPrompt, 50) : '—'" class="text-xs" style="color:var(--text-secondary)"></span>
+ </td>
+ <td class="px-4 py-3 text-center font-medium" x-text="fmt(ch.totalMessages)" style="color:var(--text-secondary)"></td>
+ <td class="px-4 py-3 text-center font-medium" x-text="fmt(ch.totalToken)" style="color:var(--text-secondary)"></td>
+ <td class="px-4 py-3 text-center text-xs" x-text="ch.lastUsedAt ? timeAgo(ch.lastUsedAt) : '—'" style="color:var(--text-muted)"></td>
+ <td class="px-4 py-3 text-right">
+<div class="inline-flex items-center gap-1">
+ <button @click="editChannel(ch)" class="p-2 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)" title="Edit">
+ <i class="fas fa-pen text-xs"></i>
+ </button>
+ <button @click="deleteChannel(ch)" class="p-2 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)" title="Delete">
+ <i class="fas fa-trash text-xs"></i>
+ </button>
+ <button @click="clearChannelMemory(ch)" class="p-2 rounded-lg" style="background:var(--bg-elevated);color:#ef4444" title="Clear Memory" x-show="$store.user.role === 'owner'">
+ <i class="fas fa-broom text-xs"></i>
+ </button>
+ </div>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <div x-show="!loading && !error && channels.length" class="md:hidden space-y-3" style="display:none">
+ <template x-for="ch in channels" :key="ch.channelId">
+ <div class="rounded-xl border p-4 hover:shadow-sm transition-shadow" style="background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="flex items-center justify-between mb-2">
+ <div class="font-semibold">
+ <i class="fas fa-hashtag mr-1" style="color:var(--text-muted)"></i>
+ <span x-text="ch.channelName"></span>
+ </div>
+ <button @click="toggleChannel(ch)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium">
+ <i class="fas fa-circle text-[6px]" :class="ch.isEnabled ? 'text-emerald-400' : ''"></i>
+ <span x-text="ch.isEnabled ? 'Enabled' : 'Disabled'"></span>
+ </button>
+ </div>
+ <p class="text-xs font-mono mb-2" x-text="ch.channelId" style="color:var(--text-secondary)"></p>
+ <p class="text-xs mb-3" x-text="ch.systemPrompt ? trunc(ch.systemPrompt, 60) : 'No custom prompt'" style="color:var(--text-secondary)"></p>
+ <div class="flex items-center gap-4 text-xs mb-3" style="color:var(--text-secondary)">
+ <span><i class="fas fa-comment mr-1"></i><span x-text="fmt(ch.totalMessages)"></span></span>
+ <span><i class="fas fa-coins mr-1"></i><span x-text="fmt(ch.totalToken)"></span></span>
+ <span x-show="ch.lastUsedAt"><i class="fas fa-clock mr-1"></i><span x-text="timeAgo(ch.lastUsedAt)"></span></span>
+ </div>
+ <div class="flex gap-2">
+ <button @click="editChannel(ch)" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors">
+ <i class="fas fa-pen"></i><span>Edit</span>
+ </button>
+ <button @click="deleteChannel(ch)" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-red-600 rounded-xl text-xs font-medium transition-colors">
+ <i class="fas fa-trash"></i><span>Delete</span>
+ </button>
+ </div>
+ </div>
+ </template>
+ </div>
+ </div>
+
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-top:1px solid var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+ </div>
+
+ <!-- Add/Edit Channel Modal -->
+ <div x-show="showAddModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4" style="display:none">
+ <div class="modal-overlay fixed inset-0" @click="closeModal()"></div>
+ <div @click.stop class="modal-content rounded-2xl shadow-2xl border w-full max-w-lg p-6 relative z-10" style="background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="flex items-center justify-between mb-5">
+ <h2 class="text-lg font-bold" x-text="editingChannel ? 'Edit Channel' : 'Add Channel'" style="color:var(--text-primary)"></h2>
+ <button @click="closeModal()" class="p-1.5 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="space-y-4">
+ <div>
+ <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary)">Channel ID</label>
+ <input x-model="form.channelId" type="text" placeholder="123456789012345678" class="w-full px-3 py-2.5 border rounded-xl text-sm transition-all" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)" focus:outline-none focus:ring-2 focus:ring-[var(--accent)]>
+ </div>
+ <div>
+ <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary)">Channel Name</label>
+ <input x-model="form.channelName" type="text" placeholder="general" class="w-full px-3 py-2.5 border rounded-xl text-sm transition-all" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)" focus:outline-none focus:ring-2 focus:ring-[var(--accent)]>
+ </div>
+ <div>
+ <label class="block text-sm font-medium mb-1" style="color:var(--text-secondary)">Custom Prompt <span class="text-xs font-normal" style="color:var(--text-muted)">(optional, appended to default)</span></label>
+ <textarea x-model="form.systemPrompt" rows="3" placeholder="Additional instructions for this channel..." class="w-full px-3 py-2.5 border rounded-xl text-sm transition-all resize-none" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)" focus:outline-none focus:ring-2 focus:ring-[var(--accent)]></textarea>
+ </div>
+ <div class="flex items-center gap-3">
+ <label class="relative inline-flex items-center cursor-pointer">
+ <input x-model="form.isEnabled" type="checkbox" class="sr-only peer">
+ <div class="w-10 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--accent)] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-[var(--toggle-knob)]  after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+ </label>
+ <span class="text-sm" x-text="form.isEnabled ? 'Enabled' : 'Disabled'" style="color:var(--text-secondary)"></span>
+ </div>
+ </div>
+ <div class="flex items-center gap-3 mt-6 pt-4" style="border-top:1px solid var(--border-color)">
+ <button @click="saveChannel()" :disabled="saving" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors">
+ <i x-show="saving" class="fas fa-spinner fa-spin"></i>
+ <span x-text="saving ? 'Saving...' : (editingChannel ? 'Update Channel' : 'Add Channel')"></span>
+ </button>
+ <button @click="closeModal()" class="px-4 py-2.5 border rounded-xl text-sm transition-colors" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-secondary)">Cancel</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- Delete Confirmation Modal -->
+ <div x-show="showDeleteModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4" style="display:none">
+ <div class="modal-overlay fixed inset-0" @click="showDeleteModal = false"></div>
+ <div @click.stop class="modal-content rounded-2xl shadow-2xl border w-full max-w-sm p-6 relative z-10" style="background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="text-center">
+ <div class="mx-auto w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+ <i class="fas fa-trash text-xl"></i>
+ </div>
+ <h2 class="text-lg font-bold mb-2" style="color:var(--text-primary)">Delete Channel</h2>
+ <p class="text-sm mb-1" style="color:var(--text-secondary)">Are you sure you want to delete <span class="font-semibold" style="color:var(--text-primary)">#<span x-text="deletingChannel?.channelName"></span></span>?</p>
+ <p class="text-xs" style="color:var(--text-muted)">This will purge all messages and cannot be undone.</p>
+ </div>
+ <div class="flex items-center gap-3 mt-6 pt-4" style="border-top:1px solid var(--border-color)">
+ <button @click="confirmDelete()" :disabled="saving" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors">
+ <i x-show="saving" class="fas fa-spinner fa-spin"></i>
+ <span x-text="saving ? 'Deleting...' : 'Delete'"></span>
+ </button>
+ <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border rounded-xl text-sm transition-colors" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-secondary)">Cancel</button>
+ </div>
+ </div>
+ </div>
+
+ <script>
+ function channelsData() {
+ return {
+ loading: true,
+ error: '',
+ path: window.location.pathname,
+ guildId: '',
+ guild: null,
+ channels: [],
+ showAddModal: false,
+ showDeleteModal: false,
+ editingChannel: null,
+ deletingChannel: null,
+ saving: false,
+ form: { channelId: '', channelName: '', systemPrompt: '', isEnabled: true },
+ async init() {
+ const parts = window.location.pathname.split('/').filter(Boolean);
+ this.guildId = parts[1];
+ if (!this.guildId) { this.error = 'No server ID specified.'; this.loading = false; return; }
+ try {
+ const [guild, channels] = await Promise.all([
+ API.get('/api/v1/guilds/' + this.guildId),
+ API.get('/api/v1/guilds/' + this.guildId + '/channels')
+ ]);
+ if (!guild || guild.error) { this.error = (guild && guild.error) || 'Server not found.'; this.loading = false; return; }
+ this.guild = guild;
+ this.channels = Array.isArray(channels) ? channels : (channels?.data || channels?.channels || []);
+ } catch (e) {
+ this.error = '❌ ' + (e?.message || 'Failed to load channel');
+ showToast('Failed to load channel', 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ closeModal() {
+ this.showAddModal = false;
+ this.editingChannel = null;
+ this.form = { channelId: '', channelName: '', systemPrompt: '', isEnabled: true };
+ },
+ editChannel(ch) {
+ this.editingChannel = ch;
+ this.form = { channelId: ch.channelId, channelName: ch.channelName, systemPrompt: ch.systemPrompt || '', isEnabled: ch.isEnabled };
+ this.showAddModal = true;
+ },
+ async saveChannel() {
+ this.saving = true;
+ try {
+ if (this.editingChannel) {
+ await API.patch('/api/v1/guilds/' + this.guildId + '/channels/' + this.editingChannel.channelId, {
+ channelName: this.form.channelName,
+ systemPrompt: this.form.systemPrompt || undefined,
+ isEnabled: this.form.isEnabled
+ });
+ showToast('Channel updated', 'success');
+ } else {
+ await API.post('/api/v1/guilds/' + this.guildId + '/channels', {
+ channelId: this.form.channelId,
+ channelName: this.form.channelName,
+ systemPrompt: this.form.systemPrompt || undefined,
+ isEnabled: this.form.isEnabled,
+ createdBy: 'dashboard'
+ });
+ showToast('Channel added', 'success');
+ }
+ this.closeModal();
+ this.channels = await API.get('/api/v1/guilds/' + this.guildId + '/channels');
+ this.channels = Array.isArray(this.channels) ? this.channels : (this.channels?.data || this.channels?.channels || []);
+ } catch (e) {
+ showToast('Failed to save channel', 'error');
+ } finally {
+ this.saving = false;
+ }
+ },
+ async toggleChannel(ch) {
+ try {
+ await API.patch('/api/v1/guilds/' + this.guildId + '/channels/' + ch.channelId, { isEnabled: !ch.isEnabled });
+ ch.isEnabled = !ch.isEnabled;
+ showToast('Channel ' + (ch.isEnabled ? 'enabled' : 'disabled'), 'success');
+ } catch (e) {
+ showToast('Failed to toggle channel', 'error');
+ }
+ },
+ deleteChannel(ch) {
+ this.deletingChannel = ch;
+ this.showDeleteModal = true;
+ },
+async confirmDelete() {
+ this.saving = true;
+ try {
+ await API.del('/api/v1/guilds/' + this.guildId + '/channels/' + this.deletingChannel.channelId + '?purge=true');
+ showToast('Channel deleted', 'success');
+ const delId = this.deletingChannel?.channelId;
+ this.channels = this.channels.filter(c => c.channelId !== delId);
+ this.showDeleteModal = false;
+ this.deletingChannel = null;
+ this.channels = await API.get('/api/v1/guilds/' + this.guildId + '/channels');
+ this.channels = Array.isArray(this.channels) ? this.channels : (this.channels?.data || this.channels?.channels || []);
+ } catch (e) {
+ showToast('Failed to delete channel', 'error');
+ } finally {
+ this.saving = false;
+ }
+ },
+ async clearChannelMemory(ch) {
+  if (!(await confirmDialog({ title: 'Clear Memory', message: 'Clear all conversation history for #' + ch.channelName + '?', confirmText: 'Clear', danger: true }))) return;
+ this.saving = true;
+ try {
+ await API.del('/api/v1/guilds/' + this.guildId + '/channels/' + ch.channelId + '/memory');
+ showToast('Channel memory cleared', 'success');
+ ch.totalMessages = 0;
+ ch.totalToken = 0;
+ } catch (e) {
+ showToast('Failed to clear memory', 'error');
+ } finally {
+ this.saving = false;
+ }
+ }
+ };
+ }
+ </script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Model Registry</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="modelsPage()" x-init="init(); $store.user.init()" >
+<script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+<div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Model Registry</h1>
+ <span x-show="!loading && !error" class="px-2.5 py-0.5 rounded-full text-xs font-medium" x-text="'Total: ' + items.length" style="display:none;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-color)"></span>
+ <div class="ml-auto flex items-center gap-3 text-sm">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username" style="color:var(--text-secondary)"></span>
+ <span class="hidden sm:inline" style="color:var(--text-muted)">·</span>
+ <i class="fas fa-circle text-emerald-400 text-xs"></i>
+ <span class="hidden sm:inline" style="color:var(--text-secondary)">Online</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:var(--tint-amber);color:#fbbf24;border:1px solid var(--border-amber)">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:var(--tint-indigo);color:var(--accent);border:1px solid var(--border-indigo)">Admin</span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="loading" class="space-y-4" style="display:none">
+ <div class="flex items-center justify-between mb-2">
+ <div class="h-5 w-40 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-5 w-24 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ </div>
+ <div class="rounded-xl border overflow-hidden" style="background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="p-4 space-y-4">
+ <template x-for="i in 5" :key="i">
+ <div class="flex items-center gap-4">
+ <div class="h-4 w-32 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-4 w-40 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-4 w-20 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-4 w-16 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-4 w-16 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-4 w-36 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-4 w-24 rounded animate-pulse" style="background:var(--bg-elevated)"></div>
+ <div class="h-6 w-14 rounded-full animate-pulse ml-auto" style="background:var(--bg-elevated)"></div>
+ </div>
+ </template>
+ </div>
+ </div>
+ </div>
+
+ <div x-show="!loading && error" class="border px-5 py-4 rounded-xl mb-6 flex items-center gap-3" x-text="error" style="display:none;background:var(--bg-surface);border-color:var(--border-color)">
+ <i class="fas fa-exclamation-circle text-lg"></i>
+ <span class="flex-1" x-text="error"></span>
+ <button @click="init()" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" style="background:var(--bg-elevated);color:var(--text-secondary)">Retry</button>
+ </div>
+
+ <div x-show="!loading && !error && items.length === 0" class="flex flex-col items-center justify-center py-20" style="display:none;color:var(--text-muted)">
+ <i class="fas fa-cube text-5xl mb-4" style="color:var(--text-muted)"></i>
+ <p class="text-lg font-medium mb-1" style="color:var(--text-secondary)">No models found</p>
+ <p class="text-sm" style="color:var(--text-muted)">Models are created under each provider's detail page.</p>
+ </div>
+
+ <div x-show="!loading && !error && items.length > 0" style="display:none">
+ <div class="flex flex-col md:flex-row items-start md:items-center gap-3 mb-6">
+ <div class="relative flex-1 w-full">
+ <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-sm" style="color:var(--text-muted)"></i>
+ <input x-model="search" type="text" placeholder="Search by model ID or display name..." class="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm transition-all" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)" focus:outline-none focus:ring-2 focus:ring-[var(--accent)]>
+ </div>
+ <select x-model="selectedProvider" class="px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent min-w-[180px]" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-secondary);appearance:none;background-image:url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e&quot;);background-position:right 0.5rem center;background-repeat:no-repeat;background-size:1.5em 1.5em;padding-right:2.5rem">
+ <option value="">All Providers</option>
+ <template x-for="p in providers" :key="p._id">
+ <option :value="p._id" x-text="p.displayName || p.name"></option>
+ </template>
+ </select>
+ <button @click="downloadCSV()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap">
+ <i class="fas fa-download"></i><span>CSV</span>
+ </button>
+ </div>
+
+ <div class="rounded-xl border overflow-hidden" style="background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="overflow-x-auto">
+ <table class="w-full text-sm">
+ <thead>
+ <tr style="background:var(--bg-elevated);border-bottom:1px solid var(--border-color)">
+ <th class="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Model ID</th>
+ <th class="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Display Name</th>
+ <th class="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Provider</th>
+ <th class="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Context</th>
+ <th class="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Output</th>
+ <th class="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Features</th>
+ <th class="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Cost /1K</th>
+ <th class="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Status</th>
+ <th class="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary)">Actions</th>
+ </tr>
+ </thead>
+ <tbody>
+ <template x-for="m in filtered" :key="m._id">
+ <tr style="background:var(--bg-surface);border-bottom:1px solid var(--border-color)" class="transition-colors hover:bg-[var(--row-hover)]">
+ <td class="px-4 py-3 font-mono text-xs" x-text="m.id" style="color:var(--text-secondary)"></td>
+ <td class="px-4 py-3 font-medium" x-text="m.displayName || m.id" style="color:var(--text-primary)"></td>
+ <td class="px-4 py-3">
+ <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="providerColor(m.providerName || m.providerId)" x-text="m.providerDisplay || m.providerName"></span>
+ </td>
+ <td class="px-4 py-3 text-right font-mono text-xs" x-text="fmtTokens(m.maxContextTokens)" style="color:var(--text-secondary)"></td>
+ <td class="px-4 py-3 text-right font-mono text-xs" x-text="fmtTokens(m.maxOutputTokens)" style="color:var(--text-secondary)"></td>
+ <td class="px-4 py-3">
+ <div class="flex items-center gap-1.5">
+ <span x-show="m.supportsVision" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium" style="background:var(--tint-indigo);color:var(--accent);border:1px solid var(--border-indigo)"><span>👁️</span><span class="hidden sm:inline">Vision</span></span>
+ <span x-show="m.supportsFunctions" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium" style="background:var(--tint-amber);color:#fbbf24;border:1px solid var(--border-amber)"><span>⚙️</span><span class="hidden sm:inline">Functions</span></span>
+ <span x-show="m.supportsJsonMode" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium" style="background:var(--tint-violet);color:#a78bfa;border:1px solid var(--border-violet)"><span>📋</span><span class="hidden sm:inline">JSON</span></span>
+ <span x-show="!m.supportsVision && !m.supportsFunctions && !m.supportsJsonMode" class="text-xs" style="color:var(--text-muted)">—</span>
+ </div>
+ </td>
+ <td class="px-4 py-3 text-right font-mono text-xs">
+ <span x-text="fmtCost(m.inputCostPer1k)"></span>
+ <span style="color:var(--text-muted)"> / </span>
+ <span x-text="fmtCost(m.outputCostPer1k)"></span>
+ </td>
+ <td class="px-4 py-3 text-center">
+ <button @click="toggleModel(m)" :class="m.isEnabled ? 'hover:bg-emerald-200/10' : ''" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
+ <span :class="m.isEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 transform rounded-full shadow-sm ring-0 transition-transform" style="background:var(--toggle-knob)"></span>
+ </button>
+ </td>
+ <td class="px-4 py-3 text-center">
+ <button @click="deleteModel(m)" class="p-1.5 rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400" style="background:var(--bg-elevated);color:var(--text-muted)" title="Delete model">
+ <i class="fas fa-trash-alt text-sm"></i>
+ </button>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ <div x-show="filtered.length === 0" class="flex flex-col items-center justify-center py-12" style="color:var(--text-muted)">
+ <i class="fas fa-search text-3xl mb-3" style="color:var(--text-muted)"></i>
+ <p class="text-sm font-medium" style="color:var(--text-secondary)">No models match your filters</p>
+ <p class="text-xs mt-1" style="color:var(--text-muted)">Try adjusting your search or provider filter.</p>
+ </div>
+ </div>
+ <p class="text-xs mt-3" style="color:var(--text-muted)" x-text="'Showing ' + filtered.length + ' of ' + items.length + ' models'"></p>
+ </div>
+ </div>
+
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-top:1px solid var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+</div>
+
+<script>
+function modelsPage() {
+ return {
+ loading: true,
+ error: '',
+ path: window.location.pathname,
+ items: [],
+ providers: [],
+ search: '',
+ selectedProvider: '',
+ async init() {
+ await this.load();
+ },
+ async load() {
+ this.loading = true;
+ this.error = '';
+ try {
+ try {
+ const [models, providers] = await Promise.all([
+ API.get('/api/v1/models'),
+ API.get('/api/v1/providers')
+ ]);
+ const pmap = {};
+ providers.forEach(p => { pmap[p._id] = p; });
+ this.items = models.map(m => ({
+ ...m,
+ providerId: m.providerId || m.provider,
+ providerName: m.providerName || (pmap[m.providerId || m.provider]?.name) || m.providerId || m.provider,
+ providerDisplay: m.providerDisplay || (pmap[m.providerId || m.provider]?.displayName) || m.providerName || m.providerId || m.provider
+ }));
+ this.providers = providers;
+ } catch (_) {
+ const providers = await API.get('/api/v1/providers');
+ const promises = providers.map(async p => {
+ const models = await API.get('/api/v1/providers/' + p._id + '/models');
+ return models.map(m => ({ ...m, providerName: p.name, providerDisplay: p.displayName, providerId: p._id }));
+ });
+ const nested = await Promise.all(promises);
+ this.items = nested.flat();
+ this.providers = providers;
+ }
+ } catch (e) {
+ this.error = e.message || 'Failed to load models';
+ showToast(this.error, 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ get filtered() {
+ let r = this.items;
+ if (this.search) {
+ const q = this.search.toLowerCase();
+ r = r.filter(m => (m.id && m.id.toLowerCase().includes(q)) || (m.displayName && m.displayName.toLowerCase().includes(q)));
+ }
+ if (this.selectedProvider) r = r.filter(m => m.providerId === this.selectedProvider);
+ return r;
+ },
+ async toggleModel(m) {
+ try {
+ await API.patch('/api/v1/providers/' + m.providerId + '/models/' + m._id, { isEnabled: !m.isEnabled });
+ m.isEnabled = !m.isEnabled;
+ showToast(m.displayName || m.id + ' ' + (m.isEnabled ? 'enabled' : 'disabled'), 'success');
+ } catch (e) {
+ showToast(e.message || 'Toggle failed', 'error');
+ }
+ },
+ async deleteModel(m) {
+ if (!(await confirmDialog({ title: 'Delete Model', message: 'Delete model "' + (m.displayName || m.id) + '" permanently?', confirmText: 'Delete', danger: true }))) return;
+ try {
+ await API.del('/api/v1/providers/' + m.providerId + '/models/' + m._id);
+ this.items = this.items.filter(x => x._id !== m._id);
+ showToast('Model deleted', 'success');
+ } catch (e) {
+ showToast(e.message || 'Delete failed', 'error');
+ }
+ },
+ downloadCSV() {
+ const rows = this.filtered;
+ if (!rows.length) return showToast('No data to export', 'warning');
+ const esc = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+ const csv = [
+ ['Model ID','Display Name','Provider','Context Tokens','Output Tokens','Vision','Functions','JSON Mode','Input Cost /1K','Output Cost /1K','Enabled'].join(','),
+ ...rows.map(m => [esc(m.id), esc(m.displayName), esc(m.providerDisplay), m.maxContextTokens||'', m.maxOutputTokens||'', m.supportsVision?'Yes':'No', m.supportsFunctions?'Yes':'No', m.supportsJsonMode?'Yes':'No', m.inputCostPer1k||'', m.outputCostPer1k||'', m.isEnabled?'Yes':'No'].join(','))
+ ].join('\n');
+ const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+ const a = document.createElement('a');
+ a.href = URL.createObjectURL(blob);
+ a.download = 'model-registry.csv';
+ a.click();
+ URL.revokeObjectURL(a.href);
+ showToast('CSV downloaded', 'success');
+ },
+ fmtTokens(n) {
+ if (n == null || isNaN(n)) return '—';
+ if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+ if (n >= 1000) {
+ const v = n / 1000;
+ return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + 'K';
+ }
+ return String(n);
+ },
+ fmtCost(n) {
+ if (n == null || isNaN(n)) return '—';
+ return '$' + Number(n).toFixed(6);
+ },
+ providerColor(name) {
+ const map = {
+  openai: 'bg-emerald-500/10 text-emerald-400',
+  anthropic: 'bg-purple-500/10 text-purple-400',
+  google: 'bg-blue-500/10 text-blue-400',
+  azure: 'bg-sky-500/10 text-sky-400',
+  bedrock: 'bg-orange-500/10 text-orange-400',
+  together: 'bg-rose-500/10 text-rose-400',
+  replicate: 'bg-cyan-500/10 text-cyan-400',
+  ollama: 'bg-yellow-500/10 text-yellow-400',
+  groq: 'bg-pink-500/10 text-pink-400',
+  deepseek: 'bg-indigo-500/10 text-indigo-400'
+  };
+ return map[(name || '').toLowerCase()] || 'bg-gray-500/10 text-gray-400';
+ }
+ };
+}
+</script>
+</body>
+</html>

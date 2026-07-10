@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Provider Detail</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="providerDetail()" x-init="init(); $store.user.init()" >
+<script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+<div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <a href="/settings/providers" class="p-2 -ml-2 rounded-lg" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-arrow-left"></i>
+ </a>
+ <h1 class="text-xl font-bold" x-text="providerName || 'Provider Detail'"></h1>
+ <div class="ml-auto flex items-center gap-3 text-sm">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username"></span>
+ <span class="hidden sm:inline">·</span>
+ <i class="fas fa-circle text-emerald-400 text-xs"></i>
+ <span class="hidden sm:inline">Online</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium">Admin</span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="error" class="border border-[var(--border-rose)] px-5 py-3 rounded-xl mb-6 flex items-center justify-between" style="display:none">
+ <span x-text="error"></span>
+ <button @click="retry()" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">Retry</button>
+ </div>
+
+ <div x-show="loading" class="space-y-6" style="display:none">
+ <div class="flex gap-4 mb-6">
+ <div class="h-9 rounded-lg w-20 animate-pulse"></div>
+ <div class="h-9 rounded-lg w-24 animate-pulse"></div>
+ <div class="h-9 rounded-lg w-20 animate-pulse"></div>
+ </div>
+ <div class="rounded-xl border p-6 animate-pulse space-y-4">
+ <div class="h-5 rounded w-1/4"></div>
+ <div class="h-10 rounded-xl"></div>
+ <div class="h-10 rounded-xl"></div>
+ <div class="h-10 rounded-xl w-1/2"></div>
+ </div>
+ </div>
+
+ <div x-show="!loading && !error" style="display:none">
+ <div class="flex border-b mb-6 overflow-x-auto">
+ <button @click="tab = 'info'" class="px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px" :class="tab === 'info' ? ' ' : 'border-transparent hover:text-primary'">
+ <i class="fas fa-info-circle mr-1.5"></i>Info
+ </button>
+ <button @click="tab = 'keys'" class="px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px" :class="tab === 'keys' ? ' ' : 'border-transparent hover:text-primary'">
+ <i class="fas fa-key mr-1.5"></i>API Keys
+ <span x-show="keys.length" class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" x-text="keys.length" style="display:none"></span>
+ </button>
+ <button @click="tab = 'models'" class="px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px" :class="tab === 'models' ? ' ' : 'border-transparent hover:text-primary'">
+ <i class="fas fa-cube mr-1.5"></i>Models
+ <span x-show="models.length" class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" x-text="models.length" style="display:none"></span>
+ </button>
+ </div>
+
+ <!-- Tab: Info -->
+ <div x-show="tab === 'info'" class="max-w-2xl">
+ <div class="rounded-xl border p-6 space-y-5">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Provider ID</label>
+ <p class="text-sm font-mono px-3.5 py-2.5 rounded-xl border" x-text="providerId"></p>
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Name</label>
+ <p class="text-sm font-mono px-3.5 py-2.5 rounded-xl border" x-text="provider?.name"></p>
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Display Name</label>
+ <input x-model="infoForm.displayName" type="text" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Base URL</label>
+ <input x-model="infoForm.baseUrl" type="text" placeholder="https://..." class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Priority</label>
+ <input x-model="infoForm.priority" type="number" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">RPM</label>
+ <input x-model="infoForm.rpm" type="number" placeholder="-" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">TPM</label>
+ <input x-model="infoForm.tpm" type="number" placeholder="-" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div class="flex items-center justify-between py-2">
+ <span class="text-sm font-medium">Enabled</span>
+ <button @click="infoForm.isEnabled = !infoForm.isEnabled" type="button" :class="infoForm.isEnabled ? 'bg-indigo-600' : ''" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="infoForm.isEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ </div>
+ <div class="flex items-center gap-3 pt-2">
+ <button @click="saveProvider()" :disabled="saving" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i x-show="saving" class="fas fa-spinner fa-spin" style="display:none"></i>
+ <span x-text="saving ? 'Saving...' : 'Save Changes'"></span>
+ </button>
+ <button @click="loadProvider()" class="px-4 py-2.5 text-sm font-medium transition-colors">Reset</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- Tab: API Keys -->
+ <div x-show="tab === 'keys'">
+ <div class="flex items-center justify-between mb-4">
+ <p class="text-sm" x-text="keys.length + ' key' + (keys.length !== 1 ? 's' : '')"></p>
+ <button @click="openAddKeyModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i class="fas fa-plus"></i>
+ <span>Add Key</span>
+ </button>
+ </div>
+
+ <template x-if="keys.length === 0">
+ <div class="flex flex-col items-center justify-center py-16">
+ <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4">
+ <i class="fas fa-key text-3xl"></i>
+ </div>
+ <p class="text-base font-medium">No API keys</p>
+ <p class="text-sm mt-1 mb-5">Add one to get started</p>
+ <button @click="openAddKeyModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i class="fas fa-plus"></i>
+ <span>Add Key</span>
+ </button>
+ </div>
+ </template>
+
+ <div x-show="keys.length" class="rounded-xl border overflow-hidden" style="display:none;background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="overflow-x-auto">
+ <table class="w-full text-sm">
+ <thead>
+ <tr class="border-b" style="border-color:var(--border-color)">
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Label</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Key</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Status</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Daily Usage</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Health</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Limits</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Rate Limited</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider w-24" style="color:var(--text-muted);border-color:var(--border-color)">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y">
+ <template x-for="k in keys" :key="k._id">
+ <tr class="transition-colors">
+ <td class="px-4 py-3 font-medium" style="border-color:var(--border-color)" x-text="k.label"></td>
+ <td class="px-4 py-3" style="border-color:var(--border-color)">
+ <span class="font-mono text-xs">••••••••</span>
+ </td>
+ <td class="px-4 py-3 text-center" style="border-color:var(--border-color)">
+ <button @click="toggleKey(k._id, k.isActive)" type="button" :class="k.isActive ? 'bg-emerald-500' : ''" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="k.isActive ? 'translate-x-[18px]' : 'translate-x-[2px]'" class="inline-block h-3.5 w-3.5 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ </td>
+ <td class="px-4 py-3 text-right text-xs" style="border-color:var(--border-color)">
+ <span x-text="fmt(k.dailyUsage?.requests || 0) + ' req'"></span>
+ <span class="mx-0.5">/</span>
+ <span x-text="fmt(k.dailyUsage?.totalTokens || 0) + ' tok'"></span>
+ </td>
+ <td class="px-4 py-3 text-xs" style="border-color:var(--border-color)">
+ <div class="space-y-0.5">
+ <span x-show="k.consecutiveErrors > 0" class="flex items-center gap-1">
+ <i class="fas fa-exclamation-circle text-[10px]"></i>
+ <span x-text="k.consecutiveErrors + ' error' + (k.consecutiveErrors !== 1 ? 's' : '')"></span>
+ </span>
+ <span x-show="k.lastErrorAt" class="text-red-400 block" x-text="'Last err: ' + timeAgo(k.lastErrorAt)"></span>
+ <span x-show="k.lastSuccessAt" class="text-emerald-500 block" x-text="'Last ok: ' + timeAgo(k.lastSuccessAt)"></span>
+ <span x-show="!k.consecutiveErrors && !k.lastSuccessAt" class="">No data</span>
+ </div>
+ </td>
+ <td class="px-4 py-3 text-xs" style="border-color:var(--border-color)">
+ <span x-show="k.providerLimits?.requestsPerMinute !== undefined || k.providerLimits?.tokensPerMinute !== undefined || k.providerLimits?.requestsPerDay !== undefined || k.providerLimits?.tokensPerDay !== undefined">
+ <span x-show="k.providerLimits?.requestsPerMinute !== undefined" x-text="'RPM: ' + k.providerLimits.requestsPerMinute"></span>
+ <span x-show="k.providerLimits?.tokensPerMinute !== undefined"> / TPM: <span x-text="k.providerLimits.tokensPerMinute"></span></span>
+ <br>
+ <span x-show="k.providerLimits?.requestsPerDay !== undefined" x-text="'Req/D: ' + fmt(k.providerLimits.requestsPerDay)"></span>
+ <span x-show="k.providerLimits?.tokensPerDay !== undefined"> / Tok/D: <span x-text="fmt(k.providerLimits.tokensPerDay)"></span></span>
+ </span>
+ <span x-show="k.providerLimits?.requestsPerMinute === undefined && k.providerLimits?.tokensPerMinute === undefined && k.providerLimits?.requestsPerDay === undefined && k.providerLimits?.tokensPerDay === undefined" class="">Unlimited</span>
+ </td>
+ <td class="px-4 py-3 text-center" style="border-color:var(--border-color)">
+ <span x-show="k.dailyUsage?.isRateLimited" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+ <i class="fas fa-clock"></i>
+ <span>Rate Limited</span>
+ </span>
+ <span x-show="!k.dailyUsage?.isRateLimited" class="">—</span>
+ </td>
+ <td class="px-4 py-3 text-center" style="border-color:var(--border-color)">
+ <div class="flex items-center justify-center gap-1">
+ <button @click="openEditKeyModal(k)" class="p-1.5 rounded-lg hover:text-indigo-500 transition-colors" title="Edit key">
+ <i class="fas fa-pen text-xs"></i>
+ </button>
+ <button @click="deleteKey(k._id, k.label)" class="p-1.5 rounded-lg transition-colors" title="Delete key">
+ <i class="fas fa-trash-alt text-xs"></i>
+ </button>
+ </div>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+
+ <!-- Tab: Models -->
+ <div x-show="tab === 'models'">
+ <div class="flex items-center justify-between mb-4">
+ <p class="text-sm" x-text="models.length + ' model' + (models.length !== 1 ? 's' : '')"></p>
+ <button @click="openAddModelModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i class="fas fa-plus"></i>
+ <span>Add Model</span>
+ </button>
+ </div>
+
+ <template x-if="models.length === 0">
+ <div class="flex flex-col items-center justify-center py-16">
+ <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4">
+ <i class="fas fa-cube text-3xl"></i>
+ </div>
+ <p class="text-base font-medium">No models</p>
+ <p class="text-sm mt-1 mb-5">Add a model to enable AI completions</p>
+ <button @click="openAddModelModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i class="fas fa-plus"></i>
+ <span>Add Model</span>
+ </button>
+ </div>
+ </template>
+
+ <div x-show="models.length" class="rounded-xl border overflow-hidden" style="display:none;background:var(--bg-surface);border-color:var(--border-color)">
+ <div class="overflow-x-auto">
+ <table class="w-full text-sm">
+ <thead>
+ <tr class="border-b" style="border-color:var(--border-color)">
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Model ID</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Display Name</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Context</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Output</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Features</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Input Cost</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Output Cost</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted);border-color:var(--border-color)">Enabled</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider w-24" style="color:var(--text-muted);border-color:var(--border-color)">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y">
+ <template x-for="m in models" :key="m._id">
+ <tr class="transition-colors">
+ <td class="px-4 py-3 font-mono text-xs" style="border-color:var(--border-color)" x-text="m.id"></td>
+ <td class="px-4 py-3 font-medium" style="border-color:var(--border-color)" x-text="m.displayName"></td>
+ <td class="px-4 py-3 text-right text-xs" style="border-color:var(--border-color)" x-text="fmt(m.maxContextTokens)"></td>
+ <td class="px-4 py-3 text-right text-xs" style="border-color:var(--border-color)" x-text="fmt(m.maxOutputTokens)"></td>
+ <td class="px-4 py-3 text-center" style="border-color:var(--border-color)">
+ <div class="flex items-center justify-center gap-1">
+ <span x-show="m.supportsVision" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs" title="Vision">👁️</span>
+ <span x-show="m.supportsFunctions" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs" title="Functions">⚙️</span>
+ <span x-show="m.supportsJsonMode" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs" title="JSON Mode">📋</span>
+ <span x-show="!m.supportsVision && !m.supportsFunctions && !m.supportsJsonMode" class="text-xs">—</span>
+ </div>
+ </td>
+ <td class="px-4 py-3 text-right text-xs" style="border-color:var(--border-color)" x-text="'$' + (m.inputCostPer1k || 0)"></td>
+ <td class="px-4 py-3 text-right text-xs" style="border-color:var(--border-color)" x-text="'$' + (m.outputCostPer1k || 0)"></td>
+ <td class="px-4 py-3 text-center" style="border-color:var(--border-color)">
+ <button @click="toggleModel(m._id, m.isEnabled)" type="button" :class="m.isEnabled ? 'bg-emerald-500' : ''" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="m.isEnabled ? 'translate-x-[18px]' : 'translate-x-[2px]'" class="inline-block h-3.5 w-3.5 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ </td>
+ <td class="px-4 py-3 text-center" style="border-color:var(--border-color)">
+ <div class="flex items-center justify-center gap-1">
+ <button @click="openEditModelModal(m)" class="p-1.5 rounded-lg hover:text-indigo-500 transition-colors" title="Edit model">
+ <i class="fas fa-pen text-xs"></i>
+ </button>
+ <button @click="deleteModel(m._id, m.displayName)" class="p-1.5 rounded-lg transition-colors" title="Delete model">
+ <i class="fas fa-trash-alt text-xs"></i>
+ </button>
+ </div>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <footer class="border-t px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+</div>
+
+<!-- Add Key Modal -->
+<div x-show="showAddKeyModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay" style="display:none">
+ <div @click="showAddKeyModal = false" class="absolute inset-0"></div>
+ <div @click.stop class="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content border relative z-10" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)">
+ <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b" style="border-color:var(--border-color)">
+ <h2 class="text-lg font-bold">Add API Key</h2>
+ <button @click="showAddKeyModal = false" class="w-8 h-8 rounded-lg flex items-center justify-center">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="p-6 space-y-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Label <span class="text-red-400">*</span></label>
+ <input x-model="keyForm.label" type="text" placeholder="Production" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">API Key <span class="text-red-400">*</span></label>
+ <input x-model="keyForm.apiKey" type="password" placeholder="sk-..." class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div class="pt-2 border-t" style="border-color:var(--border-color)">
+ <p class="text-xs font-medium uppercase tracking-wider mb-3">Provider Limits (optional)</p>
+ <div class="grid grid-cols-2 gap-3">
+ <div>
+ <label class="block text-xs mb-1">RPM</label>
+ <input x-model="keyForm.rpm" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs mb-1">TPM</label>
+ <input x-model="keyForm.tpm" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs mb-1">Requests / Day</label>
+ <input x-model="keyForm.maxDailyRequests" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs mb-1">Tokens / Day</label>
+ <input x-model="keyForm.maxDailyTokens" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="flex items-center justify-end gap-3 px-6 pb-6 pt-4 border-t" style="border-color:var(--border-color)">
+ <button @click="showAddKeyModal = false" class="px-4 py-2.5 text-sm font-medium transition-colors">Cancel</button>
+ <button @click="addKey()" :disabled="savingKey" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i x-show="savingKey" class="fas fa-spinner fa-spin" style="display:none"></i>
+ <span x-text="savingKey ? 'Saving...' : 'Add Key'"></span>
+ </button>
+ </div>
+ </div>
+</div>
+
+<!-- Edit Key Modal -->
+<div x-show="showEditKeyModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay" style="display:none">
+ <div @click="showEditKeyModal = false" class="absolute inset-0"></div>
+ <div @click.stop class="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content border relative z-10" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)">
+ <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b" style="border-color:var(--border-color)">
+ <h2 class="text-lg font-bold">Edit API Key</h2>
+ <button @click="showEditKeyModal = false" class="w-8 h-8 rounded-lg flex items-center justify-center">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="p-6 space-y-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Label</label>
+ <input x-model="editKeyForm.label" type="text" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div class="flex items-center justify-between py-2">
+ <span class="text-sm font-medium">Active</span>
+ <button @click="editKeyForm.isActive = !editKeyForm.isActive" type="button" :class="editKeyForm.isActive ? 'bg-indigo-600' : ''" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="editKeyForm.isActive ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ </div>
+ <div class="pt-2 border-t" style="border-color:var(--border-color)">
+ <p class="text-xs font-medium uppercase tracking-wider mb-3">Provider Limits (optional)</p>
+ <div class="grid grid-cols-2 gap-3">
+ <div>
+ <label class="block text-xs mb-1">RPM</label>
+ <input x-model="editKeyForm.rpm" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs mb-1">TPM</label>
+ <input x-model="editKeyForm.tpm" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs mb-1">Requests / Day</label>
+ <input x-model="editKeyForm.maxDailyRequests" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs mb-1">Tokens / Day</label>
+ <input x-model="editKeyForm.maxDailyTokens" type="number" placeholder="-" class="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="flex items-center justify-end gap-3 px-6 pb-6 pt-4 border-t" style="border-color:var(--border-color)">
+ <button @click="showEditKeyModal = false" class="px-4 py-2.5 text-sm font-medium transition-colors">Cancel</button>
+ <button @click="editKey()" :disabled="savingKey" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i x-show="savingKey" class="fas fa-spinner fa-spin" style="display:none"></i>
+ <span x-text="savingKey ? 'Saving...' : 'Save Changes'"></span>
+ </button>
+ </div>
+ </div>
+</div>
+
+<!-- Add Model Modal -->
+<div x-show="showAddModelModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay" style="display:none">
+ <div @click="showAddModelModal = false" class="absolute inset-0"></div>
+ <div @click.stop class="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content border relative z-10" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)">
+ <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b" style="border-color:var(--border-color)">
+ <h2 class="text-lg font-bold">Add Model</h2>
+ <button @click="showAddModelModal = false" class="w-8 h-8 rounded-lg flex items-center justify-center">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="p-6 space-y-4">
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Model ID <span class="text-red-400">*</span></label>
+ <input x-model="modelForm.id" type="text" placeholder="gpt-4o" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Display Name <span class="text-red-400">*</span></label>
+ <input x-model="modelForm.displayName" type="text" placeholder="GPT-4o" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Provider</label>
+ <input x-model="modelForm.provider" type="text" disabled class="w-full px-3.5 py-2.5 border rounded-xl text-sm cursor-not-allowed">
+ </div>
+ <div class="grid grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Max Context Tokens</label>
+ <input x-model="modelForm.maxContextTokens" type="number" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Max Output Tokens</label>
+ <input x-model="modelForm.maxOutputTokens" type="number" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div class="grid grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Input Cost / 1K tokens</label>
+ <input x-model="modelForm.inputCostPer1k" type="number" step="0.001" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Output Cost / 1K tokens</label>
+ <input x-model="modelForm.outputCostPer1k" type="number" step="0.001" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div>
+ <p class="text-xs font-medium uppercase tracking-wider mb-2">Features</p>
+ <div class="flex flex-wrap gap-4">
+ <label class="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox" x-model="modelForm.supportsVision" class="w-4 h-4 rounded focus:ring-[var(--accent)]">
+ <span class="text-sm">Vision 👁️</span>
+ </label>
+ <label class="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox" x-model="modelForm.supportsFunctions" class="w-4 h-4 rounded focus:ring-[var(--accent)]">
+ <span class="text-sm">Functions ⚙️</span>
+ </label>
+ <label class="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox" x-model="modelForm.supportsJsonMode" class="w-4 h-4 rounded focus:ring-[var(--accent)]">
+ <span class="text-sm">JSON Mode 📋</span>
+ </label>
+ </div>
+ </div>
+ <div class="flex items-center justify-between py-2">
+ <span class="text-sm font-medium">Enabled</span>
+ <button @click="modelForm.isEnabled = !modelForm.isEnabled" type="button" :class="modelForm.isEnabled ? 'bg-indigo-600' : ''" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="modelForm.isEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ </div>
+ </div>
+ <div class="flex items-center justify-end gap-3 px-6 pb-6 pt-4 border-t" style="border-color:var(--border-color)">
+ <button @click="showAddModelModal = false" class="px-4 py-2.5 text-sm font-medium transition-colors">Cancel</button>
+ <button @click="addModel()" :disabled="savingModel" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i x-show="savingModel" class="fas fa-spinner fa-spin" style="display:none"></i>
+ <span x-text="savingModel ? 'Saving...' : 'Add Model'"></span>
+ </button>
+ </div>
+ </div>
+</div>
+
+<!-- Edit Model Modal -->
+<div x-show="showEditModelModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay" style="display:none">
+ <div @click="showEditModelModal = false" class="absolute inset-0"></div>
+ <div @click.stop class="rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content border relative z-10" style="background:var(--bg-surface);border-color:var(--border-color);color:var(--text-primary)">
+ <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b" style="border-color:var(--border-color)">
+ <h2 class="text-lg font-bold">Edit Model</h2>
+ <button @click="showEditModelModal = false" class="w-8 h-8 rounded-lg flex items-center justify-center">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="p-6 space-y-4">
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Model ID</label>
+ <input x-model="editModelForm.id" type="text" disabled class="w-full px-3.5 py-2.5 border rounded-xl text-sm cursor-not-allowed">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Display Name</label>
+ <input x-model="editModelForm.displayName" type="text" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Provider</label>
+ <input x-model="editModelForm.provider" type="text" disabled class="w-full px-3.5 py-2.5 border rounded-xl text-sm cursor-not-allowed">
+ </div>
+ <div class="grid grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Max Context Tokens</label>
+ <input x-model="editModelForm.maxContextTokens" type="number" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Max Output Tokens</label>
+ <input x-model="editModelForm.maxOutputTokens" type="number" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div class="grid grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Input Cost / 1K tokens</label>
+ <input x-model="editModelForm.inputCostPer1k" type="number" step="0.001" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ <div>
+ <label class="block text-xs font-medium uppercase tracking-wider mb-1.5">Output Cost / 1K tokens</label>
+ <input x-model="editModelForm.outputCostPer1k" type="number" step="0.001" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+ </div>
+ </div>
+ <div>
+ <p class="text-xs font-medium uppercase tracking-wider mb-2">Features</p>
+ <div class="flex flex-wrap gap-4">
+ <label class="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox" x-model="editModelForm.supportsVision" class="w-4 h-4 rounded focus:ring-[var(--accent)]">
+ <span class="text-sm">Vision 👁️</span>
+ </label>
+ <label class="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox" x-model="editModelForm.supportsFunctions" class="w-4 h-4 rounded focus:ring-[var(--accent)]">
+ <span class="text-sm">Functions ⚙️</span>
+ </label>
+ <label class="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox" x-model="editModelForm.supportsJsonMode" class="w-4 h-4 rounded focus:ring-[var(--accent)]">
+ <span class="text-sm">JSON Mode 📋</span>
+ </label>
+ </div>
+ </div>
+ <div class="flex items-center justify-between py-2">
+ <span class="text-sm font-medium">Enabled</span>
+ <button @click="editModelForm.isEnabled = !editModelForm.isEnabled" type="button" :class="editModelForm.isEnabled ? 'bg-indigo-600' : ''" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="editModelForm.isEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ </div>
+ </div>
+ <div class="flex items-center justify-end gap-3 px-6 pb-6 pt-4 border-t" style="border-color:var(--border-color)">
+ <button @click="showEditModelModal = false" class="px-4 py-2.5 text-sm font-medium transition-colors">Cancel</button>
+ <button @click="editModel()" :disabled="savingModel" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors shadow-sm">
+ <i x-show="savingModel" class="fas fa-spinner fa-spin" style="display:none"></i>
+ <span x-text="savingModel ? 'Saving...' : 'Save Changes'"></span>
+ </button>
+ </div>
+ </div>
+</div>
+
+<script>
+function providerDetail() {
+ return {
+ loading: true,
+ error: '',
+ path: window.location.pathname,
+ providerId: window.location.pathname.split('/').pop(),
+ provider: null,
+ providerName: '',
+ tab: 'info',
+ keys: [],
+ models: [],
+ saving: false,
+ savingKey: false,
+ savingModel: false,
+ infoForm: { displayName: '', baseUrl: '', priority: 0, rpm: '', tpm: '', isEnabled: true },
+ showAddKeyModal: false,
+ keyForm: { label: '', apiKey: '', rpm: '', tpm: '', maxDailyRequests: '', maxDailyTokens: '' },
+ showEditKeyModal: false,
+ editKeyForm: { _id: '', label: '', isActive: true, rpm: '', tpm: '', maxDailyRequests: '', maxDailyTokens: '' },
+ showAddModelModal: false,
+ modelForm: { id: '', displayName: '', provider: '', maxContextTokens: 128000, maxOutputTokens: 4096, supportsVision: false, supportsFunctions: false, supportsJsonMode: false, inputCostPer1k: 0, outputCostPer1k: 0, isEnabled: true },
+ showEditModelModal: false,
+ editModelForm: { _id: '', id: '', displayName: '', provider: '', maxContextTokens: 128000, maxOutputTokens: 4096, supportsVision: false, supportsFunctions: false, supportsJsonMode: false, inputCostPer1k: 0, outputCostPer1k: 0, isEnabled: true },
+ async init() {
+ try {
+ this.provider = await API.get('/api/v1/providers/' + this.providerId);
+ this.providerName = this.provider.displayName || this.provider.name || '';
+ this.populateInfoForm();
+ await Promise.all([this.loadKeys(), this.loadModels()]);
+ } catch (e) {
+ this.error = '❌ ' + (e?.message || 'Failed to load provider');
+ showToast('Failed to load provider', 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ retry() {
+ this.error = '';
+ this.loading = true;
+ this.init();
+ },
+ populateInfoForm() {
+ this.infoForm.displayName = this.provider.displayName || '';
+ this.infoForm.baseUrl = this.provider.baseUrl || '';
+ this.infoForm.priority = this.provider.priority ?? 0;
+ this.infoForm.rpm = this.provider.rateLimits?.requestsPerMinute ?? '';
+ this.infoForm.tpm = this.provider.rateLimits?.tokensPerMinute ?? '';
+ this.infoForm.isEnabled = this.provider.isEnabled ?? true;
+ },
+ async loadProvider() {
+ try {
+ this.provider = await API.get('/api/v1/providers/' + this.providerId);
+ this.providerName = this.provider.displayName || this.provider.name || '';
+ this.populateInfoForm();
+ } catch (e) {
+ showToast('Failed to reload provider', 'error');
+ }
+ },
+ async loadKeys() {
+ try {
+ const data = await API.get('/api/v1/providers/' + this.providerId + '/keys');
+ this.keys = Array.isArray(data) ? data : (data?.data || data?.keys || []);
+ } catch (e) {
+ showToast('Failed to load keys', 'error');
+ this.keys = [];
+ }
+ },
+ async loadModels() {
+ try {
+ const data = await API.get('/api/v1/providers/' + this.providerId + '/models');
+ this.models = Array.isArray(data) ? data : (data?.data || data?.models || []);
+ } catch (e) {
+ showToast('Failed to load models', 'error');
+ this.models = [];
+ }
+ },
+ async saveProvider() {
+ this.saving = true;
+ try {
+ const body = {
+ displayName: this.infoForm.displayName.trim(),
+ baseUrl: this.infoForm.baseUrl.trim() || undefined,
+ priority: parseInt(this.infoForm.priority) || 0,
+ isEnabled: this.infoForm.isEnabled
+ };
+ const rpm = parseInt(this.infoForm.rpm);
+ const tpm = parseInt(this.infoForm.tpm);
+ if (!isNaN(rpm) || !isNaN(tpm)) {
+ body.rateLimits = {};
+ if (!isNaN(rpm)) body.rateLimits.requestsPerMinute = rpm;
+ if (!isNaN(tpm)) body.rateLimits.tokensPerMinute = tpm;
+ }
+ await API.patch('/api/v1/providers/' + this.providerId, body);
+ showToast('Provider updated', 'success');
+ await this.loadProvider();
+ } catch (e) {
+ showToast(e?.message || 'Failed to update provider', 'error');
+ } finally {
+ this.saving = false;
+ }
+ },
+ openAddKeyModal() {
+ this.keyForm = { label: '', apiKey: '', rpm: '', tpm: '', maxDailyRequests: '', maxDailyTokens: '' };
+ this.showAddKeyModal = true;
+ },
+ async addKey() {
+ if (!this.keyForm.label.trim() || !this.keyForm.apiKey.trim()) {
+ showToast('Label and API Key are required', 'warning');
+ return;
+ }
+ this.savingKey = true;
+ try {
+ const body = { label: this.keyForm.label.trim(), apiKey: this.keyForm.apiKey.trim() };
+ const pl = {};
+ const rpm = parseInt(this.keyForm.rpm);
+ const tpm = parseInt(this.keyForm.tpm);
+ const rpd = parseInt(this.keyForm.maxDailyRequests);
+ const tpd = parseInt(this.keyForm.maxDailyTokens);
+ if (!isNaN(rpm)) pl.requestsPerMinute = rpm;
+ if (!isNaN(tpm)) pl.tokensPerMinute = tpm;
+ if (!isNaN(rpd)) pl.requestsPerDay = rpd;
+ if (!isNaN(tpd)) pl.tokensPerDay = tpd;
+ if (Object.keys(pl).length) body.providerLimits = pl;
+ await API.post('/api/v1/providers/' + this.providerId + '/keys', body);
+ showToast('API key added', 'success');
+ this.showAddKeyModal = false;
+ await this.loadKeys();
+ } catch (e) {
+ showToast(e?.message || 'Failed to add key', 'error');
+ } finally {
+ this.savingKey = false;
+ }
+ },
+ openEditKeyModal(k) {
+ const pl = k.providerLimits || {};
+ this.editKeyForm = {
+ _id: k._id,
+ label: k.label || '',
+ isActive: k.isActive ?? true,
+ rpm: pl.requestsPerMinute ?? '',
+ tpm: pl.tokensPerMinute ?? '',
+ maxDailyRequests: pl.requestsPerDay ?? '',
+ maxDailyTokens: pl.tokensPerDay ?? ''
+ };
+ this.showEditKeyModal = true;
+ },
+ async editKey() {
+ this.savingKey = true;
+ try {
+ const body = { label: this.editKeyForm.label.trim(), isActive: this.editKeyForm.isActive };
+ const pl = {};
+ const rpm = parseInt(this.editKeyForm.rpm);
+ const tpm = parseInt(this.editKeyForm.tpm);
+ const rpd = parseInt(this.editKeyForm.maxDailyRequests);
+ const tpd = parseInt(this.editKeyForm.maxDailyTokens);
+ if (!isNaN(rpm)) pl.requestsPerMinute = rpm;
+ if (!isNaN(tpm)) pl.tokensPerMinute = tpm;
+ if (!isNaN(rpd)) pl.requestsPerDay = rpd;
+ if (!isNaN(tpd)) pl.tokensPerDay = tpd;
+ if (Object.keys(pl).length) body.providerLimits = pl;
+ await API.patch('/api/v1/providers/' + this.providerId + '/keys/' + this.editKeyForm._id, body);
+ showToast('API key updated', 'success');
+ this.showEditKeyModal = false;
+ await this.loadKeys();
+ } catch (e) {
+ showToast(e?.message || 'Failed to update key', 'error');
+ } finally {
+ this.savingKey = false;
+ }
+ },
+ async toggleKey(id, current) {
+ try {
+ await API.patch('/api/v1/providers/' + this.providerId + '/keys/' + id, { isActive: !current });
+ showToast('Key ' + (!current ? 'enabled' : 'disabled'), !current ? 'success' : 'warning');
+ await this.loadKeys();
+ } catch (e) {
+ showToast(e?.message || 'Failed to update key', 'error');
+ }
+ },
+ async deleteKey(id, label) {
+ if (!(await confirmDialog({ title: 'Delete API Key', message: 'Delete API key "' + label + '"? This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
+ try {
+ await API.del('/api/v1/providers/' + this.providerId + '/keys/' + id);
+ showToast('API key deleted', 'success');
+ await this.loadKeys();
+ } catch (e) {
+ showToast(e?.message || 'Failed to delete key', 'error');
+ }
+ },
+ openAddModelModal() {
+ this.modelForm = { id: '', displayName: '', provider: this.provider?.name || '', maxContextTokens: 128000, maxOutputTokens: 4096, supportsVision: false, supportsFunctions: false, supportsJsonMode: false, inputCostPer1k: 0, outputCostPer1k: 0, isEnabled: true };
+ this.showAddModelModal = true;
+ },
+ async addModel() {
+ if (!this.modelForm.id.trim() || !this.modelForm.displayName.trim()) {
+ showToast('Model ID and Display Name are required', 'warning');
+ return;
+ }
+ this.savingModel = true;
+ try {
+ const body = {
+ id: this.modelForm.id.trim(),
+ displayName: this.modelForm.displayName.trim(),
+ provider: this.provider?.name || '',
+ maxContextTokens: parseInt(this.modelForm.maxContextTokens) || 128000,
+ maxOutputTokens: parseInt(this.modelForm.maxOutputTokens) || 4096,
+ supportsVision: !!this.modelForm.supportsVision,
+ supportsFunctions: !!this.modelForm.supportsFunctions,
+ supportsJsonMode: !!this.modelForm.supportsJsonMode,
+ inputCostPer1k: parseFloat(this.modelForm.inputCostPer1k) || 0,
+ outputCostPer1k: parseFloat(this.modelForm.outputCostPer1k) || 0,
+ isEnabled: this.modelForm.isEnabled
+ };
+ await API.post('/api/v1/providers/' + this.providerId + '/models', body);
+ showToast('Model added', 'success');
+ this.showAddModelModal = false;
+ await this.loadModels();
+ } catch (e) {
+ showToast(e?.message || 'Failed to add model', 'error');
+ } finally {
+ this.savingModel = false;
+ }
+ },
+ openEditModelModal(m) {
+ this.editModelForm = {
+ _id: m._id,
+ id: m.id || '',
+ displayName: m.displayName || '',
+ provider: this.provider?.name || '',
+ maxContextTokens: m.maxContextTokens ?? 128000,
+ maxOutputTokens: m.maxOutputTokens ?? 4096,
+ supportsVision: !!m.supportsVision,
+ supportsFunctions: !!m.supportsFunctions,
+ supportsJsonMode: !!m.supportsJsonMode,
+ inputCostPer1k: m.inputCostPer1k ?? 0,
+ outputCostPer1k: m.outputCostPer1k ?? 0,
+ isEnabled: m.isEnabled ?? true
+ };
+ this.showEditModelModal = true;
+ },
+ async editModel() {
+ this.savingModel = true;
+ try {
+ const body = {
+ displayName: this.editModelForm.displayName.trim(),
+ maxContextTokens: parseInt(this.editModelForm.maxContextTokens) || 128000,
+ maxOutputTokens: parseInt(this.editModelForm.maxOutputTokens) || 4096,
+ supportsVision: !!this.editModelForm.supportsVision,
+ supportsFunctions: !!this.editModelForm.supportsFunctions,
+ supportsJsonMode: !!this.editModelForm.supportsJsonMode,
+ inputCostPer1k: parseFloat(this.editModelForm.inputCostPer1k) || 0,
+ outputCostPer1k: parseFloat(this.editModelForm.outputCostPer1k) || 0,
+ isEnabled: this.editModelForm.isEnabled
+ };
+ await API.patch('/api/v1/providers/' + this.providerId + '/models/' + this.editModelForm._id, body);
+ showToast('Model updated', 'success');
+ this.showEditModelModal = false;
+ await this.loadModels();
+ } catch (e) {
+ showToast(e?.message || 'Failed to update model', 'error');
+ } finally {
+ this.savingModel = false;
+ }
+ },
+ async toggleModel(id, current) {
+ try {
+ await API.patch('/api/v1/providers/' + this.providerId + '/models/' + id, { isEnabled: !current });
+ showToast('Model ' + (!current ? 'enabled' : 'disabled'), !current ? 'success' : 'warning');
+ await this.loadModels();
+ } catch (e) {
+ showToast(e?.message || 'Failed to update model', 'error');
+ }
+ },
+ async deleteModel(id, name) {
+ if (!(await confirmDialog({ title: 'Delete Model', message: 'Delete model "' + name + '"? This cannot be undone.', confirmText: 'Delete', danger: true }))) return;
+ try {
+ await API.del('/api/v1/providers/' + this.providerId + '/models/' + id);
+ showToast('Model deleted', 'success');
+ await this.loadModels();
+ } catch (e) {
+ showToast(e?.message || 'Failed to delete model', 'error');
+ }
+ }
+ };
+}
+</script>
+</body>
+</html>

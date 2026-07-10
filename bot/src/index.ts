@@ -1,0 +1,232 @@
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env') });
+import { Client, GatewayIntentBits, Events, ActivityType, ContainerBuilder, MessageFlags } from 'discord.js';
+import { connectDB } from './db';
+import { encrypt } from './services/Encryption';
+import { Provider } from './models/Provider';
+import { MCPServer } from './models/MCPServer';
+import { EMOJI } from './constants/emoji';
+import { handlePanel, handlePanelComponent } from './commands/panel';
+import { handleMe, handleMeComponent, handleMeModal } from './commands/me';
+import { handleHelp, handleHelpComponent } from './commands/help';
+import { handleEmoji } from './commands/emoji';
+import { handleMessage } from './events/messageCreate';
+import { handleGuildCreate, handleGuildDelete } from './events/guildEvents';
+import { createApiServer } from './api/server';
+import { startConversationCleanup } from './services/ConversationCleanup';
+import { disconnectAll as disconnectMCP } from './services/MCPClient';
+import { scanMCPDirectory } from './services/MCPScanner';
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ ANTI-CRASH: Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error, origin) => {
+  console.error('❌ ANTI-CRASH: Uncaught Exception:', error, origin);
+});
+
+async function seedProviders() {
+  const existingCount = await Provider.countDocuments();
+  if (existingCount > 0) return;
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    await Provider.create({
+      name: 'openai',
+      displayName: 'OpenAI',
+      isEnabled: true,
+      priority: 0,
+      createdBy: 'system',
+      models: [
+        { id: 'gpt-4o', displayName: 'GPT-4o', provider: 'openai', maxContextTokens: 128000, maxOutputTokens: 16384, supportsVision: true, supportsFunctions: true, supportsJsonMode: true, inputCostPer1k: 2.5, outputCostPer1k: 10, isEnabled: true },
+        { id: 'gpt-4o-mini', displayName: 'GPT-4o Mini', provider: 'openai', maxContextTokens: 128000, maxOutputTokens: 16384, supportsFunctions: true, supportsJsonMode: true, inputCostPer1k: 0.15, outputCostPer1k: 0.6, isEnabled: true },
+      ],
+      apiKeys: [{
+        keyEncrypted: encrypt(openaiKey),
+        label: 'Default',
+        isActive: true,
+        dailyUsage: { date: '', requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, isRateLimited: false },
+        consecutiveErrors: 0,
+      }],
+    });
+    console.log('✔ Seeded OpenAI provider from OPENAI_API_KEY');
+  }
+
+  const customExists = await Provider.findOne({ name: 'custom' });
+  if (!customExists) {
+    await Provider.create({
+      name: 'custom',
+      displayName: 'Custom (Ollama)',
+      baseUrl: 'http://localhost:11434/v1',
+      isEnabled: true,
+      priority: 10,
+      createdBy: 'system',
+      models: [
+        { id: 'llama3', displayName: 'Llama 3', provider: 'custom', maxContextTokens: 8192, maxOutputTokens: 4096, supportsVision: false, supportsFunctions: false, supportsJsonMode: false, inputCostPer1k: 0, outputCostPer1k: 0, isEnabled: true },
+        { id: 'mistral', displayName: 'Mistral', provider: 'custom', maxContextTokens: 8192, maxOutputTokens: 4096, supportsVision: false, supportsFunctions: false, supportsJsonMode: false, inputCostPer1k: 0, outputCostPer1k: 0, isEnabled: true },
+      ],
+      apiKeys: [{
+        keyEncrypted: encrypt('ollama'),
+        label: 'Default',
+        isActive: true,
+        dailyUsage: { date: '', requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, isRateLimited: false },
+        consecutiveErrors: 0,
+      }],
+    });
+    console.log('✔ Seeded default Custom (Ollama) provider');
+  }
+}
+
+async function seedMCPServers() {
+  const correctPath = require('path').resolve(__dirname, '..', 'mcp-servers', 'ddg-search', 'ddg_search.py');
+  const ddgExists = await MCPServer.findOne({ name: 'ddg-search' });
+  if (!ddgExists) {
+    await MCPServer.create({
+      name: 'ddg-search',
+      displayName: 'DuckDuckGo Search',
+      command: 'python3',
+      args: [correctPath],
+      isEnabled: true,
+      isDefault: true,
+      description: 'DuckDuckGo web search — built-in MCP server for searching the web without an API key.',
+      tools: ['web_search', 'web_fetch'],
+      transportType: 'stdio',
+      personalFields: [],
+    });
+    console.log('✔ Seeded default MCP server: ddg-search');
+  } else if (ddgExists.args?.[0] !== correctPath) {
+    // Fix stale path
+    ddgExists.args = [correctPath];
+    await ddgExists.save();
+    console.log('✔ Fixed ddg-search path to: ' + correctPath);
+  }
+}
+
+const token = process.env.DISCORD_TOKEN;
+if (!token) { console.error('DISCORD_TOKEN missing'); process.exit(1); }
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+  ],
+});
+
+client.on('error', (err) => {
+  console.error('⚠️ Client error:', err.message);
+});
+
+client.once(Events.ClientReady, async (c) => {
+  console.log(`✅ Gapat Bot online as ${c.user.username}`);
+  await seedProviders();
+  await seedMCPServers();
+
+  // Check if Python is available for MCP servers
+  try {
+    const { execSync } = require('child_process');
+    const pythonVersion = execSync('python3 --version', { timeout: 5000 }).toString().trim();
+    console.log(`✔ Python available: ${pythonVersion}`);
+  } catch {
+    console.warn('⚠️  Python3 not found — MCP servers requiring Python will not work.');
+    console.warn('   Install Python3 or add to render.yaml: PYTHON_VERSION=3.11');
+  }
+
+  // Auto-scan mcp-servers directory for new MCPs
+  try {
+    const scanResult = await scanMCPDirectory();
+    if (scanResult.added.length || scanResult.errors.length) {
+      console.log(`✔ MCP scan: ${scanResult.added.length} added, ${scanResult.updated.length} updated`);
+      if (scanResult.errors.length) console.log(`  Errors: ${scanResult.errors.join('; ')}`);
+    }
+  } catch (e: any) {
+    console.error('MCP scan failed:', e.message);
+  }
+  startConversationCleanup();
+  await c.user.setPresence({
+    activities: [{ name: '/help', type: ActivityType.Listening }],
+    status: 'online',
+  });
+});
+
+client.on(Events.GuildCreate, handleGuildCreate);
+client.on(Events.GuildDelete, handleGuildDelete);
+
+client.on(Events.InteractionCreate, async (interaction) => {
+  try {
+    if (interaction.isChatInputCommand()) {
+      switch (interaction.commandName) {
+        case 'panel': await handlePanel(interaction); break;
+        case 'me': await handleMe(interaction); break;
+        case 'help': await handleHelp(interaction); break;
+        case 'deploy-emoji': await handleEmoji(interaction); break;
+      }
+    } else if (interaction.isButton()) {
+      if (interaction.customId.startsWith('panel_')) await handlePanelComponent(interaction);
+      else if (interaction.customId.startsWith('me_')) await handleMeComponent(interaction);
+      else if (interaction.customId.startsWith('help_')) await handleHelpComponent(interaction);
+      else if (interaction.customId === 'emoji_close') {
+        try { await interaction.deferUpdate(); await interaction.editReply({ components: [new ContainerBuilder().setAccentColor(0x5865F2).addTextDisplayComponents(t => t.setContent(`${EMOJI.CLOSE} Closed`))], flags: MessageFlags.IsComponentsV2 }); } catch { }
+      }
+    } else if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith('panel_')) await handlePanelComponent(interaction);
+      else if (interaction.customId.startsWith('me_')) await handleMeModal(interaction);
+    }
+  } catch (error) {
+    console.error('Interaction error:', error);
+    if (!interaction.isAutocomplete()) {
+      const errMsg = `${EMOJI.CLOSE} An internal error occurred.`;
+      const errCmp = [new ContainerBuilder().setAccentColor(0x5865F2).addTextDisplayComponents(t => t.setContent(errMsg))];
+      const V2_EPH = MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral;
+      try {
+        if (interaction.deferred) await interaction.editReply({ components: errCmp, flags: MessageFlags.IsComponentsV2 });
+        else if (interaction.replied) await interaction.followUp({ components: errCmp, flags: V2_EPH });
+        else await interaction.reply({ components: errCmp, flags: V2_EPH });
+      } catch { }
+    }
+  }
+});
+
+client.on(Events.MessageCreate, handleMessage);
+
+const { app, port } = createApiServer(client);
+
+app.get('/api/v1/me/guilds', (req: any, res: any) => {
+  const secret = process.env.INTERNAL_API_SECRET;
+  if (!secret || req.headers['x-api-secret'] !== secret) return res.status(401).json({ error: 'Unauthorized' });
+  res.json({ guildIds: [...client.guilds.cache.keys()] });
+});
+
+async function start() {
+  await connectDB().catch(err => {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
+
+  app.listen(port, () => {
+    console.log(`API server running on port ${port}`);
+  });
+
+  client.login(token).catch(err => {
+    console.error('Login failed:', err);
+    process.exit(1);
+  });
+}
+
+// Graceful shutdown
+let shuttingDown = false;
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n${signal} received — shutting down gracefully...`);
+  try { disconnectMCP(); } catch {}
+  try { client.destroy(); } catch { }
+  try { const mongoose = await import('mongoose'); await mongoose.default.disconnect(); } catch { }
+  process.exit(0);
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+start();

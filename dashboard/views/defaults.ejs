@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Global Defaults</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="defaultsPage()" x-init="init(); $store.user.init()" >
+<script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+<div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="color:var(--text-muted)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Global Defaults</h1>
+ <span class="text-sm hidden md:inline" style="color:var(--text-muted)">These defaults apply to all servers unless overridden</span>
+ <div class="ml-auto flex items-center gap-3">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium text-sm" style="color:var(--text-muted)" x-text="$store.user.username"></span>
+ <span class="hidden sm:inline" style="color:var(--border-color)">·</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 text-xs font-medium rounded-full" style="background:rgba(99,102,241,0.2);color:#818cf8">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 text-xs font-medium rounded-full" style="background:rgba(245,158,11,0.2);color:#f59e0b">Admin</span>
+ <button @click="reset()" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-undo"></i><span>Reset</span>
+ </button>
+ <button @click="save()" :disabled="saving" class="px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2" style="background:var(--accent)">
+ <i x-show="!saving" class="fas fa-save"></i>
+ <i x-show="saving" class="fas fa-spinner fa-spin"></i>
+ <span x-text="saving ? 'Saving...' : 'Save'"></span>
+ </button>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1 max-w-4xl">
+ <div x-show="loading" class="space-y-6" style="display:none">
+ <template x-for="i in 4" :key="i">
+ <div class="rounded-xl p-5" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="h-5 w-40 rounded animate-pulse mb-6" style="background:var(--bg-elevated)"></div>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <template x-for="j in 2" :key="j">
+ <div class="h-10 rounded-lg animate-pulse" style="background:var(--bg-elevated)"></div>
+ </template>
+ <div class="h-10 rounded-lg animate-pulse" style="background:var(--bg-elevated)"></div>
+ </div>
+ </div>
+ </template>
+ </div>
+
+ <div x-show="!loading && error" class="px-5 py-4 rounded-xl mb-6 flex items-center gap-3" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444">
+ <i class="fas fa-exclamation-circle text-lg"></i>
+ <span class="flex-1" x-text="error"></span>
+ <button @click="init()" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" style="background:rgba(239,68,68,0.2);color:#ef4444">Retry</button>
+ </div>
+
+ <div x-show="!loading && !error" style="display:none">
+ <div class="space-y-6">
+ <div class="rounded-xl p-5" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <h2 class="text-base font-semibold mb-1" style="color:var(--text-primary)">Token & Request Limits</h2>
+ <p class="text-xs mb-5" style="color:var(--text-muted)">Global daily limits and per-response caps</p>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Daily Token Limit</label>
+ <input x-model.number="form.dailyTokenLimit" type="number" min="0" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Daily Request Limit</label>
+ <input x-model.number="form.dailyRequestLimit" type="number" min="0" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Per-Response Token Limit</label>
+ <input x-model.number="form.perResponseTokenLimit" type="number" min="1" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Max Context Tokens (%)</label>
+ <input x-model.number="form.maxContextTokensPercent" type="number" min="1" max="100" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ </div>
+ </div>
+
+ <div class="rounded-xl p-5" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <h2 class="text-base font-semibold mb-1" style="color:var(--text-primary)">Server Defaults</h2>
+ <p class="text-xs mb-5" style="color:var(--text-muted)">Default values for per-server configuration</p>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Max Channels Per Server</label>
+ <input x-model.number="form.maxChannelsPerServer" type="number" min="1" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Memory Retention (Days)</label>
+ <input x-model.number="form.memoryRetentionDays" type="number" min="1" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Temperature</label>
+ <input x-model.number="form.temperature" type="number" min="0" max="2" step="0.1" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Response Language</label>
+ <div class="relative" @click.outside="langOpen = false">
+ <input x-model="langQuery" @focus="langOpen = true" @input="langOpen = true" type="text" :placeholder="langOptions.find(o => o.value === form.responseLanguage)?.label || 'Search language...'" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary);placeholder-color:var(--text-muted)">
+ <div x-show="langOpen" class="absolute z-50 mt-1 w-full rounded-xl shadow-lg max-h-60 overflow-y-auto" style="display:none;background:var(--bg-surface);border:1px solid var(--border-color)">
+ <template x-for="opt in langOptions.filter(o => !langQuery || o.label.toLowerCase().includes(langQuery.toLowerCase()) || o.value.toLowerCase().includes(langQuery.toLowerCase()))" :key="opt.value">
+ <button @click="form.responseLanguage = opt.value; langOpen = false; langQuery = ''" type="button" class="w-full text-left px-3 py-2 text-sm transition-colors" :class="form.responseLanguage === opt.value ? 'font-medium' : ''" x-text="opt.label" style="color:var(--text-primary);background:form.responseLanguage === opt.value ? 'var(--accent-bg)' : 'transparent'"></button>
+ </template>
+ <div x-show="langOptions.filter(o => !langQuery || o.label.toLowerCase().includes(langQuery.toLowerCase()) || o.value.toLowerCase().includes(langQuery.toLowerCase())).length === 0" class="px-3 py-4 text-sm text-center" style="color:var(--text-muted)">No results</div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="rounded-xl p-5" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <h2 class="text-base font-semibold mb-1" style="color:var(--text-primary)">Features</h2>
+ <p class="text-xs mb-5" style="color:var(--text-muted)">Toggle bot features and display options</p>
+ <div class="space-y-4">
+ <label class="flex items-center justify-between p-3 rounded-xl cursor-pointer" style="background:var(--bg-elevated)">
+ <div>
+ <p class="text-sm font-medium" style="color:var(--text-primary)">Show Usage Footer</p>
+ <p class="text-xs" style="color:var(--text-muted)">Show token/model info in AI response footer</p>
+ </div>
+ <button type="button" @click="form.showUsageFooter = !form.showUsageFooter" :class="form.showUsageFooter ? 'bg-indigo-600' : ''" class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
+ <span :class="form.showUsageFooter ? 'translate-x-5' : 'translate-x-0'" class="inline-block h-5 w-5 transform rounded-full shadow-sm ring-0 transition-transform" style="background:var(--toggle-knob)"></span>
+ </button>
+ </label>
+ </div>
+ </div>
+
+ <div class="rounded-xl p-5" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <h2 class="text-base font-semibold mb-1" style="color:var(--text-primary)">Cooldown Settings</h2>
+ <p class="text-xs mb-5" style="color:var(--text-muted)">Per-user cooldown between prompts (global, across all servers)</p>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+ <div>
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Default Cooldown (seconds)</label>
+ <input x-model.number="form.globalCooldownSeconds" type="number" min="0" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ <p class="text-xs mt-1" style="color:var(--text-muted)">Applied to new users. Save with the main Save button.</p>
+ </div>
+ </div>
+
+ <div class="border-t pt-4 mt-4" style="border-color:var(--border-color)">
+ <h3 class="text-sm font-semibold mb-3" style="color:var(--text-primary)">Set Cooldown Per User</h3>
+ <div class="flex flex-col sm:flex-row gap-3 mb-4">
+ <div class="flex-1">
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">User ID (or "all")</label>
+ <input x-model="cooldownUserId" type="text" placeholder="Discord User ID or 'all'" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div class="w-full sm:w-32">
+ <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Seconds</label>
+ <input x-model.number="cooldownSeconds" type="number" min="0" placeholder="30" class="w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-primary)">
+ </div>
+ <div class="flex items-end">
+ <button @click="setCooldown()" :disabled="settingCooldown || !cooldownUserId || cooldownSeconds === null" class="px-5 py-2.5 text-sm font-medium text-white disabled:opacity-60 rounded-xl transition-colors flex items-center gap-2" style="background:#8b5cf6">
+ <i x-show="!settingCooldown" class="fas fa-clock"></i>
+ <i x-show="settingCooldown" class="fas fa-spinner fa-spin"></i>
+ <span x-text="settingCooldown ? 'Setting...' : 'Set Cooldown'"></span>
+ </button>
+ </div>
+ </div>
+
+ <div x-show="activeCooldowns.length > 0" class="mt-3">
+ <h4 class="text-xs font-medium mb-2" style="color:var(--text-secondary)">Active Cooldowns</h4>
+ <div class="space-y-2 max-h-48 overflow-y-auto">
+ <template x-for="c in activeCooldowns" :key="c.userId">
+ <div class="flex items-center justify-between p-2.5 rounded-lg text-sm" style="background:var(--bg-elevated)">
+ <div class="flex items-center gap-2">
+ <i class="fas fa-clock" style="color:#8b5cf6"></i>
+ <span class="font-mono text-xs" style="color:var(--text-primary)" x-text="c.userId"></span>
+ </div>
+ <div class="flex items-center gap-3">
+ <span class="text-xs" style="color:var(--text-muted)" x-text="c.cooldownSeconds + 's'"></span>
+ <span class="text-xs" style="color:var(--text-muted)" x-text="getTimeRemaining(c.cooldownUntil)"></span>
+ <button @click="removeCooldown(c.userId)" class="text-xs px-2 py-1 rounded-lg transition-colors" style="color:#ef4444;background:rgba(239,68,68,0.1)">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ </div>
+ </template>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+ <button @click="showPropagateModal = true" :disabled="propagating" class="px-6 py-3 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2.5 text-sm" style="background:var(--accent)">
+ <i x-show="!propagating" class="fas fa-cloud-upload-alt"></i>
+ <i x-show="propagating" class="fas fa-spinner fa-spin"></i>
+ <span x-text="propagating ? 'Propagating...' : 'Propagate to All Servers'"></span>
+ </button>
+ <button @click="reset()" class="px-4 py-3 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-undo"></i>
+ <span>Reset to defaults</span>
+ </button>
+ </div>
+ </div>
+ </div>
+
+ <footer class="border-t px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+</div>
+
+<!-- Propagate Confirmation Modal -->
+<div x-show="showPropagateModal" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.6);display:none" @click="showPropagateModal = false">
+ <div @click.stop class="rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-3 mb-4">
+ <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(245,158,11,0.2)">
+ <i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i>
+ </div>
+ <div>
+ <h3 class="text-lg font-semibold" style="color:var(--text-primary)">Confirm Propagation</h3>
+ <p class="text-sm" style="color:var(--text-muted)">This action will override server-specific settings</p>
+ </div>
+ </div>
+ <p class="text-sm mb-6" style="color:var(--text-secondary)">Are you sure you want to propagate these settings to all servers? This will override any existing server-specific overrides.</p>
+ <div class="flex justify-end gap-3">
+ <button @click="showPropagateModal = false" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors" style="color:var(--text-muted);background:var(--bg-elevated)">Cancel</button>
+ <button @click="showPropagateModal = false; propagate()" class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors" style="background:#f59e0b">Confirm</button>
+ </div>
+ </div>
+</div>
+
+<script>
+const LANG_OPTIONS = [
+ { value: 'id', label: 'Indonesian (Language Indonesia)' },
+ { value: 'en', label: 'English' },
+ { value: 'af', label: 'Afrikaans' },
+ { value: 'ar', label: 'Arabic (العربية)' },
+ { value: 'bg', label: 'Bulgarian (Български)' },
+ { value: 'bn', label: 'Bengali (বাংলা)' },
+ { value: 'ca', label: 'Catalan (Català)' },
+ { value: 'cs', label: 'Czech (Čeština)' },
+ { value: 'da', label: 'Danish (Dansk)' },
+ { value: 'de', label: 'German (Deutsch)' },
+ { value: 'el', label: 'Greek (Ελληνικά)' },
+ { value: 'es', label: 'Spanish (Español)' },
+ { value: 'et', label: 'Estonian (Eesti)' },
+ { value: 'fa', label: 'Persian (فارسی)' },
+ { value: 'fi', label: 'Finnish (Suomi)' },
+ { value: 'fr', label: 'French (Français)' },
+ { value: 'gu', label: 'Gujarati (ગુજરાતી)' },
+ { value: 'he', label: 'Hebrew (עברית)' },
+ { value: 'hi', label: 'Hindi (हिन्दी)' },
+ { value: 'hr', label: 'Croatian (Hrvatski)' },
+ { value: 'hu', label: 'Hungarian (Magyar)' },
+ { value: 'it', label: 'Italian (Italiano)' },
+ { value: 'ja', label: 'Japanese (日本語)' },
+ { value: 'jv', label: 'Javanese (Basa Jawa)' },
+ { value: 'ka', label: 'Georgian (ქართული)' },
+ { value: 'km', label: 'Khmer (ភាសាខ្មែរ)' },
+ { value: 'kn', label: 'Kannada (ಕನ್ನಡ)' },
+ { value: 'ko', label: 'Korean (한국어)' },
+ { value: 'lo', label: 'Lao (ລາວ)' },
+ { value: 'lt', label: 'Lithuanian (Lietuvių)' },
+ { value: 'lv', label: 'Latvian (Latviešu)' },
+ { value: 'mg', label: 'Malagasy' },
+ { value: 'mk', label: 'Macedonian (Македонски)' },
+ { value: 'ml', label: 'Malayalam (മലയാളം)' },
+ { value: 'mn', label: 'Mongolian (Монгол)' },
+ { value: 'mr', label: 'Marathi (मराठी)' },
+ { value: 'ms', label: 'Malay (Language Melayu)' },
+ { value: 'my', label: 'Burmese (မြန်မာ)' },
+ { value: 'ne', label: 'Nepali (नेपाली)' },
+ { value: 'nl', label: 'Dutch (Nederlands)' },
+ { value: 'no', label: 'Norwegian (Norsk)' },
+ { value: 'pa', label: 'Punjabi (ਪੰਜਾਬੀ)' },
+ { value: 'pl', label: 'Polish (Polski)' },
+ { value: 'pt', label: 'Portuguese (Português)' },
+ { value: 'ro', label: 'Romanian (Română)' },
+ { value: 'ru', label: 'Russian (Русский)' },
+ { value: 'si', label: 'Sinhala (සිංහල)' },
+ { value: 'sk', label: 'Slovak (Slovenčina)' },
+ { value: 'sl', label: 'Slovenian (Slovenščina)' },
+ { value: 'sq', label: 'Albanian (Shqip)' },
+ { value: 'sr', label: 'Serbian (Српски)' },
+ { value: 'su', label: 'Sundanese (Basa Sunda)' },
+ { value: 'sv', label: 'Swedish (Svenska)' },
+ { value: 'sw', label: 'Swahili (Kiswahili)' },
+ { value: 'ta', label: 'Tamil (தமிழ்)' },
+ { value: 'te', label: 'Telugu (తెలుగు)' },
+ { value: 'th', label: 'Thai (ไทย)' },
+ { value: 'tr', label: 'Turkish (Türkçe)' },
+ { value: 'uk', label: 'Ukrainian (Українська)' },
+ { value: 'ur', label: 'Urdu (اردو)' },
+ { value: 'vi', label: 'Vietnamese (Tiếng Việt)' },
+ { value: 'zh', label: 'Chinese Simplified (简体中文)' },
+ { value: 'zh-tw', label: 'Chinese Traditional (繁體中文)' },
+ { value: 'zu', label: 'Zulu (isiZulu)' },
+];
+
+function defaultsPage() {
+ return {
+ loading: true,
+ saving: false,
+ propagating: false,
+ error: '',
+ path: window.location.pathname,
+ langOpen: false,
+ langQuery: '',
+ langOptions: LANG_OPTIONS,
+ showPropagateModal: false,
+ cooldownUserId: '',
+ cooldownSeconds: 30,
+ settingCooldown: false,
+ activeCooldowns: [],
+ form: {
+ dailyTokenLimit: 50000,
+ dailyRequestLimit: 100,
+ perResponseTokenLimit: 4096,
+ maxChannelsPerServer: 10,
+ maxContextTokensPercent: 80,
+ memoryRetentionDays: 30,
+   responseLanguage: 'en',
+ temperature: 0.7,
+ showUsageFooter: true,
+ globalCooldownSeconds: 30,
+ },
+ async init() {
+ await this.load();
+ await this.loadCooldowns();
+ },
+ async load() {
+ this.loading = true;
+ this.error = '';
+ try {
+ const data = await API.get('/api/v1/globalsettings');
+ Object.assign(this.form, data);
+ } catch (e) {
+ this.error = e.message || 'Failed to load global settings';
+ showToast(this.error, 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ async save() {
+ this.saving = true;
+ try {
+ await API.patch('/api/v1/globalsettings', this.form);
+ showToast('Global defaults saved successfully', 'success');
+ } catch (e) {
+ showToast(e.message || 'Save failed', 'error');
+ } finally {
+ this.saving = false;
+ }
+ },
+ async reset() {
+ await this.load();
+ showToast('Form reset to saved values', 'info');
+ },
+ async propagate() {
+ this.propagating = true;
+ try {
+ await API.post('/api/v1/globalsettings/propagate');
+ showToast('Settings propagated to all servers successfully', 'success');
+ } catch (e) {
+ showToast(e.message || 'Propagation failed', 'error');
+ } finally {
+ this.propagating = false;
+ }
+ },
+ async loadCooldowns() {
+ try {
+ this.activeCooldowns = await API.get('/api/v1/globalsettings/cooldowns');
+ } catch {}
+ },
+ async setCooldown() {
+ if (!this.cooldownUserId || this.cooldownSeconds === null) return;
+ this.settingCooldown = true;
+ try {
+ await API.post('/api/v1/globalsettings/cooldowns', {
+ userId: this.cooldownUserId,
+ seconds: this.cooldownSeconds,
+ });
+ showToast(`Cooldown set to ${this.cooldownSeconds}s for ${this.cooldownUserId}`, 'success');
+ this.cooldownUserId = '';
+ await this.loadCooldowns();
+ } catch (e) {
+ showToast(e.message || 'Failed to set cooldown', 'error');
+ } finally {
+ this.settingCooldown = false;
+ }
+ },
+ async removeCooldown(userId) {
+ try {
+ await API.del(`/api/v1/globalsettings/cooldowns/${userId}`);
+ showToast(`Cooldown removed for ${userId}`, 'success');
+ await this.loadCooldowns();
+ } catch (e) {
+ showToast(e.message || 'Failed to remove cooldown', 'error');
+ }
+ },
+ getTimeRemaining(until) {
+ const now = new Date();
+ const end = new Date(until);
+ const diff = Math.max(0, Math.ceil((end - now) / 1000));
+ if (diff <= 0) return 'expired';
+ if (diff < 60) return diff + 's';
+ if (diff < 3600) return Math.floor(diff / 60) + 'm ' + (diff % 60) + 's';
+ return Math.floor(diff / 3600) + 'h ' + Math.floor((diff % 3600) / 60) + 'm';
+ },
+ };
+}
+</script>
+</body>
+</html>

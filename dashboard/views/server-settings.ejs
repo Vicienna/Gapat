@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Server Settings</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="serverSettingsData()" x-init="init(); $store.user.init()" >
+<script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+<div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <a :href="'/servers/' + guildId" class="p-1.5 -ml-1 rounded-lg" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-arrow-left"></i>
+ </a>
+ <div class="flex items-center gap-2 min-w-0">
+ <h1 class="text-xl font-bold truncate" style="color:var(--text-primary)" x-text="guild?.name ? guild.name + ' — Settings' : 'Server Settings'"></h1>
+ <span x-show="guild" class="hidden md:inline text-sm font-mono" style="color:var(--text-muted)" x-text="guild.id"></span>
+ </div>
+ <div x-show="!loading && guild" class="ml-auto flex items-center gap-3 text-sm" style="color:var(--text-secondary)">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username"></span>
+ <span class="hidden sm:inline" style="color:var(--border-color)">·</span>
+ <i class="fas fa-circle text-emerald-400 text-xs"></i>
+ <span class="hidden sm:inline">Online</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(99,102,241,0.2);color:#818cf8">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.2);color:#f59e0b">Admin</span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="loading" class="flex items-center justify-center py-20" style="display:none">
+ <i class="fas fa-spinner fa-spin text-2xl mr-3"></i>
+ <span>Loading settings...</span>
+ </div>
+
+ <div x-show="!loading && error" class="px-5 py-3 rounded-xl mb-6" x-text="error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444"></div>
+
+ <div x-show="!loading && !error" style="display:none">
+ <div class="rounded-xl p-6 mb-6" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center justify-between mb-6">
+ <div>
+ <h2 class="text-lg font-bold" style="color:var(--text-primary)">Server Configuration</h2>
+ <p class="text-sm mt-0.5" style="color:var(--text-muted)">Customize settings for this server.</p>
+ </div>
+          <div x-show="$store.user.role === 'owner'" class="flex items-center gap-3">
+            <span class="text-sm font-medium" style="color:var(--text-secondary)">Use Global Defaults</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input x-model="useGlobal" type="checkbox" class="sr-only peer">
+              <div class="w-11 h-6 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--accent)] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-[var(--toggle-knob)] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" style="background:var(--bg-elevated)"></div>
+            </label>
+          </div>
+ </div>
+
+ <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+ <template x-for="field in fields" :key="field.key">
+ <div>
+ <template x-if="field.type === 'checkbox'">
+ <label class="flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <input x-model="form[field.key]" type="checkbox" :disabled="useGlobal" class="accent-indigo-600 w-5 h-5 rounded">
+ <div class="flex-1">
+ <span class="text-sm font-medium" style="color:var(--text-primary)" x-text="field.label"></span>
+ <p x-show="useGlobal" class="text-xs mt-0.5" style="color:var(--text-muted)">
+ <span x-text="'Global: ' + (globalDefaults[field.key] ? 'Yes' : 'No')"></span>
+ </p>
+ </div>
+ </label>
+ </template>
+ <template x-if="field.type === 'select'">
+ <div>
+ <label class="block text-sm font-medium mb-1.5" style="color:var(--text-secondary)" x-text="field.label"></label>
+ <template x-if="!field.searchable">
+ <select x-model="form[field.key]" :disabled="useGlobal" class="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" style="background:var(--bg-elevated);border-color:var(--border-color);color:var(--text-primary)">
+ <template x-for="opt in field.options" :key="opt.value">
+ <option :value="opt.value" x-text="opt.label"></option>
+ </template>
+ </select>
+ </template>
+ <template x-if="field.searchable">
+ <div class="relative" @click.outside="field.searchOpen = false">
+ <input x-model="field.searchQuery" @focus="field.searchOpen = true" @input="field.searchOpen = true" type="text" :placeholder="field.options.find(o => o.value === form[field.key])?.label || 'Search...'" :disabled="useGlobal" class="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" style="background:var(--bg-elevated);border-color:var(--border-color);color:var(--text-primary)">
+ <div x-show="field.searchOpen" class="absolute z-50 mt-1 w-full rounded-xl shadow-lg max-h-60 overflow-y-auto" style="display:none;background:var(--bg-surface);border:1px solid var(--border-color)">
+ <template x-for="opt in field.options.filter(o => !field.searchQuery || o.label.toLowerCase().includes(field.searchQuery.toLowerCase()) || o.value.toLowerCase().includes(field.searchQuery.toLowerCase()))" :key="opt.value">
+ <button @click="form[field.key] = opt.value; field.searchOpen = false; field.searchQuery = ''" type="button" class="w-full text-left px-3 py-2 text-sm transition-colors" :class="form[field.key] === opt.value ? ' font-medium' : ''" style="color:var(--text-primary)" x-text="opt.label"></button>
+ </template>
+ <div x-show="field.options.filter(o => !field.searchQuery || o.label.toLowerCase().includes(field.searchQuery.toLowerCase()) || o.value.toLowerCase().includes(field.searchQuery.toLowerCase())).length === 0" class="px-3 py-4 text-sm text-center" style="color:var(--text-muted)">No results</div>
+ </div>
+ </div>
+ </template>
+ <p x-show="useGlobal" class="text-xs mt-1" style="color:var(--text-muted)">
+ <span x-text="'Global: ' + (globalDefaults[field.key] || '—')"></span>
+ </p>
+ </div>
+ </template>
+ <template x-if="field.type === 'number'">
+ <div>
+ <label class="block text-sm font-medium mb-1.5" style="color:var(--text-secondary)" x-text="field.label"></label>
+ <input x-model.number="form[field.key]" type="number" :min="field.min ?? 0" :max="field.max" :step="field.step ?? 1" :disabled="useGlobal" class="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" style="background:var(--bg-elevated);border-color:var(--border-color);color:var(--text-primary)">
+ <p x-show="field.max !== undefined" class="text-xs mt-0.5" style="color:#f59e0b">
+ <span x-text="'Max: ' + fmt(field.max)"></span>
+ </p>
+ <p x-show="useGlobal && globalDefaults[field.key] !== undefined" class="text-xs mt-1" style="color:var(--text-muted)">
+ <span x-text="'Global: ' + fmt(globalDefaults[field.key])"></span>
+ </p>
+ </div>
+ </template>
+ </div>
+ </template>
+ </div>
+
+ <div class="flex items-center gap-3 mt-8 pt-6 border-t" style="border-top:1px solid var(--border-color)">
+ <button @click="save()" :disabled="saving" class="inline-flex items-center gap-2 px-6 py-2.5 font-semibold rounded-xl text-sm transition-colors" style="background:var(--accent);color:#fff">
+ <i x-show="saving" class="fas fa-spinner fa-spin"></i>
+ <i x-show="!saving" class="fas fa-save"></i>
+ <span x-text="saving ? 'Saving...' : 'Save Settings'"></span>
+ </button>
+ <button @click="resetForm()" class="px-4 py-2.5 text-sm font-medium rounded-xl text-sm transition-colors" style="color:var(--text-secondary);background:var(--bg-elevated)">
+ <i class="fas fa-undo mr-1.5"></i>Reset
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-top:1px solid var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+</div>
+
+<script>
+ function serverSettingsData() {
+ return {
+ loading: true,
+ error: '',
+ path: window.location.pathname,
+ guildId: '',
+ guild: null,
+ globalDefaults: {},
+ useGlobal: false,
+ form: {},
+ saving: false,
+ fields: [],
+ async init() {
+ const role = Alpine.store('user')?.role || 'user';
+ const isOwner = role === 'owner';
+ const parts = window.location.pathname.split('/').filter(Boolean);
+ this.guildId = parts[1];
+ if (!this.guildId) { this.error = 'No server ID specified.'; this.loading = false; return; }
+
+ this.fields = [
+ { key: 'dailyTokenLimit', label: 'Daily Token Limit', type: 'number', min: 0, max: isOwner ? undefined : 100000 },
+ { key: 'dailyRequestLimit', label: 'Daily Request Limit', type: 'number', min: 0, max: isOwner ? undefined : 100 },
+ { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, step: 0.1 },
+ { key: 'showUsageFooter', label: 'Show Usage Footer', type: 'checkbox' },
+ { key: 'responseLanguage', label: 'Response Language', type: 'select', searchable: true, searchQuery: '', searchOpen: false, options: [
+ { value: 'id', label: 'Indonesian (Language Indonesia)' },
+ { value: 'en', label: 'English' },
+ { value: 'af', label: 'Afrikaans' },
+ { value: 'ar', label: 'Arabic (العربية)' },
+ { value: 'bg', label: 'Bulgarian (Български)' },
+ { value: 'bn', label: 'Bengali (বাংলা)' },
+ { value: 'ca', label: 'Catalan (Català)' },
+ { value: 'cs', label: 'Czech (Čeština)' },
+ { value: 'da', label: 'Danish (Dansk)' },
+ { value: 'de', label: 'German (Deutsch)' },
+ { value: 'el', label: 'Greek (Ελληνικά)' },
+ { value: 'es', label: 'Spanish (Español)' },
+ { value: 'et', label: 'Estonian (Eesti)' },
+ { value: 'fa', label: 'Persian (فارسی)' },
+ { value: 'fi', label: 'Finnish (Suomi)' },
+ { value: 'fr', label: 'French (Français)' },
+ { value: 'gu', label: 'Gujarati (ગુજરાતી)' },
+ { value: 'he', label: 'Hebrew (עברית)' },
+ { value: 'hi', label: 'Hindi (हिन्दी)' },
+ { value: 'hr', label: 'Croatian (Hrvatski)' },
+ { value: 'hu', label: 'Hungarian (Magyar)' },
+ { value: 'it', label: 'Italian (Italiano)' },
+ { value: 'ja', label: 'Japanese (日本語)' },
+ { value: 'jv', label: 'Javanese (Basa Jawa)' },
+ { value: 'ka', label: 'Georgian (ქართული)' },
+ { value: 'km', label: 'Khmer (ភាសាខ្មែរ)' },
+ { value: 'kn', label: 'Kannada (ಕನ್ನಡ)' },
+ { value: 'ko', label: 'Korean (한국어)' },
+ { value: 'lo', label: 'Lao (ລາວ)' },
+ { value: 'lt', label: 'Lithuanian (Lietuvių)' },
+ { value: 'lv', label: 'Latvian (Latviešu)' },
+ { value: 'mg', label: 'Malagasy' },
+ { value: 'mk', label: 'Macedonian (Македонски)' },
+ { value: 'ml', label: 'Malayalam (മലയാളം)' },
+ { value: 'mn', label: 'Mongolian (Монгол)' },
+ { value: 'mr', label: 'Marathi (मराठी)' },
+ { value: 'ms', label: 'Malay (Language Melayu)' },
+ { value: 'my', label: 'Burmese (မြန်မာ)' },
+ { value: 'ne', label: 'Nepali (नेपाली)' },
+ { value: 'nl', label: 'Dutch (Nederlands)' },
+ { value: 'no', label: 'Norwegian (Norsk)' },
+ { value: 'pa', label: 'Punjabi (ਪੰਜਾਬੀ)' },
+ { value: 'pl', label: 'Polish (Polski)' },
+ { value: 'pt', label: 'Portuguese (Português)' },
+ { value: 'ro', label: 'Romanian (Română)' },
+ { value: 'ru', label: 'Russian (Русский)' },
+ { value: 'si', label: 'Sinhala (සිංහල)' },
+ { value: 'sk', label: 'Slovak (Slovenčina)' },
+ { value: 'sl', label: 'Slovenian (Slovenščina)' },
+ { value: 'sq', label: 'Albanian (Shqip)' },
+ { value: 'sr', label: 'Serbian (Српски)' },
+ { value: 'su', label: 'Sundanese (Basa Sunda)' },
+ { value: 'sv', label: 'Swedish (Svenska)' },
+ { value: 'sw', label: 'Swahili (Kiswahili)' },
+ { value: 'ta', label: 'Tamil (தமிழ்)' },
+ { value: 'te', label: 'Telugu (తెలుగు)' },
+ { value: 'th', label: 'Thai (ไทย)' },
+ { value: 'tr', label: 'Turkish (Türkçe)' },
+ { value: 'uk', label: 'Ukrainian (Українська)' },
+ { value: 'ur', label: 'Urdu (اردو)' },
+ { value: 'vi', label: 'Vietnamese (Tiếng Việt)' },
+ { value: 'zh', label: 'Chinese Simplified (简体中文)' },
+ { value: 'zh-tw', label: 'Chinese Traditional (繁體中文)' },
+ { value: 'zu', label: 'Zulu (isiZulu)' },
+ ] },
+ ];
+ if (isOwner) {
+ this.fields.push(
+ { key: 'perResponseTokenLimit', label: 'Per Response Token Limit', type: 'number', min: 1 },
+ { key: 'maxChannels', label: 'Max Channels', type: 'number', min: 1 },
+ { key: 'memoryRetentionDays', label: 'Memory Retention (Days)', type: 'number', min: 1 },
+ );
+ }
+
+ try {
+ const [guild, globals] = await Promise.all([
+ API.get('/api/v1/guilds/' + this.guildId),
+ API.get('/api/v1/globalsettings')
+ ]);
+ if (!guild || guild.error) { this.error = (guild && guild.error) || 'Server not found.'; this.loading = false; return; }
+ this.guild = guild;
+ this.useGlobal = guild.useGlobalDefaults === true;
+ this.globalDefaults = globals?.settings || globals || {};
+ this.form = {};
+ this.fields.forEach(f => {
+ const val = guild[f.key];
+ if (f.type === 'checkbox') {
+ this.form[f.key] = val !== undefined ? Boolean(val) : Boolean(this.globalDefaults[f.key] ?? (f.key === 'showUsageFooter'));
+ } else if (f.type === 'select') {
+  this.form[f.key] = val !== undefined ? val : (this.globalDefaults[f.key] ?? 'en');
+ } else {
+ this.form[f.key] = val !== undefined ? val : (this.globalDefaults[f.key] ?? (f.key === 'temperature' ? 0.7 : 0));
+ }
+ });
+ } catch (e) {
+ this.error = '❌ ' + (e?.message || 'Failed to load settings');
+ showToast('Failed to load settings', 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ resetForm() {
+ this.useGlobal = false;
+ const guild = this.guild || {};
+ const globals = this.globalDefaults || {};
+ this.fields.forEach(f => {
+ const guildVal = guild[f.key];
+ const globalVal = globals[f.key];
+ if (f.type === 'checkbox') {
+ this.form[f.key] = guildVal !== undefined ? Boolean(guildVal) : Boolean(globalVal ?? (f.key === 'showUsageFooter'));
+ } else if (f.type === 'select') {
+ this.form[f.key] = guildVal !== undefined ? guildVal : (globalVal ?? 'id');
+ } else {
+ this.form[f.key] = guildVal !== undefined ? guildVal : (globalVal ?? (f.key === 'temperature' ? 0.7 : 0));
+ }
+ });
+ },
+ async save() {
+ this.saving = true;
+ try {
+ const role = Alpine.store('user')?.role || 'user';
+ const body = {};
+ if (role === 'owner') body.useGlobalDefaults = this.useGlobal;
+ this.fields.forEach(f => {
+ let val = this.form[f.key];
+ if (f.type === 'number') {
+ val = Number(val);
+ if (f.max !== undefined && val > f.max) val = f.max;
+ if (f.min !== undefined && val < f.min) val = f.min;
+ }
+ body[f.key] = val;
+ });
+ await API.patch('/api/v1/guilds/' + this.guildId, body);
+ showToast('Server settings saved', 'success');
+ } catch (e) {
+ showToast('Failed to save settings', 'error');
+ } finally {
+ this.saving = false;
+ }
+ }
+ };
+ }
+</script>
+</body>
+</html>

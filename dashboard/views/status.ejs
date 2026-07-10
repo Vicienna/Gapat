@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Status</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body style="background:var(--bg-base);color:var(--text-primary)" x-data="statusPage()" x-init="init(); $store.user.init()">
+ <script src="/js/app.js"></script>
+
+ <%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg hover:bg-[var(--hover-bg)]">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">System Status</h1>
+ </header>
+
+ <div class="flex-1 p-4 md:p-8">
+ <div class="flex items-center justify-between mb-6">
+ <p style="color:var(--text-secondary)">Current status of Gapat Bot services</p>
+ <button @click="refresh()" :disabled="refreshing" class="px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2" style="background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-secondary)">
+ <i class="fas fa-sync-alt" :class="{ 'fa-spin': refreshing }"></i>
+ <span>Refresh</span>
+ </button>
+ </div>
+
+ <!-- Overall Status -->
+ <div class="p-6 rounded-2xl border mb-6" :class="overallStatus === 'ok' ? 'bg-emerald-900/20 border-emerald-700/30' : 'bg-red-900/20 border-red-700/30'">
+ <div class="flex items-center gap-4">
+ <div class="w-12 h-12 rounded-xl flex items-center justify-center" :class="overallStatus === 'ok' ? 'bg-emerald-600/20' : 'bg-red-600/20'">
+ <i class="fas text-2xl" :class="overallStatus === 'ok' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-red-400'"></i>
+ </div>
+ <div>
+ <p class="text-xl font-bold" x-text="overallStatus === 'ok' ? 'All Systems Operational' : 'System Issues Detected'" style="color:var(--text-primary)"></p>
+ <p class="text-sm" style="color:var(--text-muted)" x-text="lastChecked"></p>
+ </div>
+ </div>
+ </div>
+
+ <!-- Loading -->
+ <div x-show="loading" class="flex items-center justify-center py-20" style="color:var(--text-muted)">
+ <i class="fas fa-spinner fa-spin text-2xl mr-3"></i>
+ <span>Checking status...</span>
+ </div>
+
+ <!-- Status Cards -->
+ <div x-show="!loading" class="grid sm:grid-cols-2 gap-4">
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-center justify-between mb-3">
+ <div class="flex items-center gap-2.5">
+ <div class="w-3 h-3 rounded-full" :class="dashboardStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'"></div>
+ <span class="font-semibold" style="color:var(--text-primary)">Dashboard API</span>
+ </div>
+ <i class="fas fa-tachometer-alt" style="color:var(--text-muted)"></i>
+ </div>
+ <p class="text-sm" style="color:var(--text-secondary)" x-text="dashboardStatus === 'ok' ? 'Responding normally' : 'Not responding'"></p>
+ </div>
+
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-center justify-between mb-3">
+ <div class="flex items-center gap-2.5">
+ <div class="w-3 h-3 rounded-full" :class="botStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'"></div>
+ <span class="font-semibold" style="color:var(--text-primary)">Bot API</span>
+ </div>
+ <i class="fas fa-robot" style="color:var(--text-muted)"></i>
+ </div>
+ <p class="text-sm" style="color:var(--text-secondary)" x-text="botStatus === 'ok' ? 'Bot active and responding' : 'Bot not responding'"></p>
+ </div>
+
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-center justify-between mb-3">
+ <div class="flex items-center gap-2.5">
+ <div class="w-3 h-3 rounded-full" :class="dbStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'"></div>
+ <span class="font-semibold" style="color:var(--text-primary)">Database</span>
+ </div>
+ <i class="fas fa-database" style="color:var(--text-muted)"></i>
+ </div>
+ <p class="text-sm" style="color:var(--text-secondary)" x-text="dbStatus === 'ok' ? 'MongoDB connected' : 'Database error'"></p>
+ </div>
+
+ <div class="p-5 rounded-xl" style="background:var(--bg-elevated);border:1px solid var(--border-color)">
+ <div class="flex items-center justify-between mb-3">
+ <div class="flex items-center gap-2.5">
+ <div class="w-3 h-3 rounded-full" :class="discordStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'"></div>
+ <span class="font-semibold" style="color:var(--text-primary)">Discord Gateway</span>
+ </div>
+ <i class="fab fa-discord" style="color:var(--text-muted)"></i>
+ </div>
+ <p class="text-sm" style="color:var(--text-secondary)" x-text="discordStatus === 'ok' ? 'Gateway connected to Discord' : 'Discord connection issues'"></p>
+ </div>
+ </div>
+
+ <!-- Error -->
+ <div x-show="error" x-text="error" class="mt-6 px-5 py-3 rounded-xl text-sm" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:rgb(252,165,165)"></div>
+ </div>
+
+ <footer class="border-t px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <div class="flex items-center gap-4">
+ <a href="/privacy" style="color:var(--text-muted)" class="hover:no-underline">Privacy Policy</a>
+ <a href="/terms" style="color:var(--text-muted)" class="hover:no-underline">Terms of Service</a>
+ </div>
+ </footer>
+ </div>
+
+ <script>
+ function statusPage() {
+ return {
+ loading: true,
+ refreshing: false,
+ error: '',
+ overallStatus: 'ok',
+ lastChecked: '',
+ dashboardStatus: 'unknown',
+ botStatus: 'unknown',
+ dbStatus: 'unknown',
+ discordStatus: 'unknown',
+ async init() {
+ await this.check();
+ setInterval(() => this.check(), 30000);
+ },
+ async refresh() {
+ this.refreshing = true;
+ await this.check();
+ this.refreshing = false;
+ },
+ async check() {
+ this.loading = true;
+ this.error = '';
+ let errors = 0;
+ try {
+ const d = await fetch('/health').then(r => r.json());
+ this.dashboardStatus = d.status === 'ok' ? 'ok' : 'error';
+ } catch(e) {
+ this.dashboardStatus = 'error';
+ errors++;
+ }
+ try {
+ const b = await fetch('/api/public/health').then(r => r.json());
+ this.botStatus = b.status === 'ok' ? 'ok' : 'error';
+ this.dbStatus = b.database === 'connected' ? 'ok' : 'error';
+ this.discordStatus = b.discord === 'connected' ? 'ok' : 'error';
+ } catch(e) {
+ this.botStatus = 'error';
+ this.dbStatus = 'error';
+ this.discordStatus = 'error';
+ errors++;
+ }
+ this.overallStatus = errors === 0 ? 'ok' : 'issue';
+ this.lastChecked = 'Last updated: ' + new Date().toLocaleString('en-US');
+ this.loading = false;
+ }
+ };
+ }
+ </script>
+</body>
+</html>

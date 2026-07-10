@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: gapat-bot
+    runtime: node
+    repo: https://github.com/your-repo/gapat-full
+    branch: main
+    buildCommand: pip install ddgs && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_OWNER_ID
+        sync: false
+      - key: DASHBOARD_URL
+        sync: false
+      - key: INTERNAL_API_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: BOT_API_PORT
+        value: 3100

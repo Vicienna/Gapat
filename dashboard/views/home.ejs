@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — AI Chatbot for Discord</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+ @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+ .hero-glow { position: absolute; width: 600px; height: 600px; border-radius: 50%; filter: blur(120px); opacity: .15; pointer-events: none; }
+ .card-hover { transition: all .3s ease; }
+ .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(99,102,241,.15); }
+ .gradient-text { background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="{}" x-init="$store.user.init()">
+ <script src="/js/app.js"></script>
+
+ <%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <!-- Header -->
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg hover:bg-[var(--hover-bg)]">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Gapat Bot</h1>
+ </header>
+
+ <!-- Content -->
+ <div class="flex-1">
+ <!-- Hero -->
+ <section class="relative overflow-hidden">
+ <div class="hero-glow bg-indigo-600" style="top:-200px;left:-100px"></div>
+ <div class="hero-glow bg-purple-600" style="bottom:-300px;right:-100px"></div>
+ <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center relative">
+ <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-600/10 border border-indigo-500/20 rounded-full text-indigo-300 text-sm font-medium mb-8">
+ <i class="fas fa-robot text-xs"></i>
+ <span>AI-Powered Discord Bot</span>
+ </div>
+ <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight mb-6">
+ AI Bot for<br>
+ <span class="gradient-text">Your Discord Server</span>
+ </h1>
+ <p class="text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+ Gapat Bot brings artificial intelligence to your Discord server.
+ Automation, AI chatbot, and smart features in one bot.
+ </p>
+ <div class="flex flex-wrap items-center justify-center gap-4">
+ <a href="/login" class="inline-flex items-center gap-3 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-600/25">
+ <i class="fab fa-discord text-lg"></i>
+ <span>Get Started with Discord</span>
+ </a>
+ <a href="#features" class="inline-flex items-center gap-2 px-8 py-3.5" style="background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:.75rem;font-weight:600;transition:all .2s">
+ <span>Learn More</span>
+ <i class="fas fa-arrow-down text-sm"></i>
+ </a>
+ </div>
+ </div>
+ </section>
+
+ <!-- Features -->
+ <section id="features" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+ <div class="text-center mb-12">
+ <h2 class="text-3xl font-bold mb-3" style="color:var(--text-primary)">Key Features</h2>
+ <p class="max-w-xl mx-auto" style="color:var(--text-secondary)">Everything you need to manage your Discord server with AI</p>
+ </div>
+ <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+ <div class="card-hover p-6 rounded-xl" style="background:var(--card-bg);border:1px solid var(--border-color)">
+ <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:var(--accent-bg);border:1px solid rgba(99,102,241,.3)">
+ <i class="fas fa-brain" style="color:var(--accent)"></i>
+ </div>
+ <h3 class="font-semibold mb-2" style="color:var(--text-primary)">AI Chatbot</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">An intelligent AI chatbot that can hold conversations, answer questions, and help server members.</p>
+ </div>
+
+ <div class="card-hover p-6 rounded-xl" style="background:var(--card-bg);border:1px solid var(--border-color)">
+ <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.3)">
+ <i class="fas fa-sliders text-amber-400"></i>
+ </div>
+ <h3 class="font-semibold mb-2" style="color:var(--text-primary)">Customizable</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Set prefix, specific channels, daily message limits, and more to fit your server needs.</p>
+ </div>
+ <div class="card-hover p-6 rounded-xl" style="background:var(--card-bg);border:1px solid var(--border-color)">
+ <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(244,63,94,.2);border:1px solid rgba(244,63,94,.3)">
+ <i class="fas fa-chart-line text-rose-400"></i>
+ </div>
+ <h3 class="font-semibold mb-2" style="color:var(--text-primary)">Analytics</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Track server activity, token usage, and real-time statistics with the dashboard.</p>
+ </div>
+ <div class="card-hover p-6 rounded-xl" style="background:var(--card-bg);border:1px solid var(--border-color)">
+ <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.3)">
+ <i class="fas fa-database text-cyan-400"></i>
+ </div>
+ <h3 class="font-semibold mb-2" style="color:var(--text-primary)">Multi-Provider AI</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Supports multiple AI providers — choose the model that best fits your server.</p>
+ </div>
+ <div class="card-hover p-6 rounded-xl" style="background:var(--card-bg);border:1px solid var(--border-color)">
+ <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.3)">
+ <i class="fas fa-headset text-violet-400"></i>
+ </div>
+ <h3 class="font-semibold mb-2" style="color:var(--text-primary)">24/7 Online</h3>
+ <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">Bot runs 24/7 with stable performance and fast responses for your server.</p>
+ </div>
+ </div>
+ </section>
+
+ <!-- Stats Marquee -->
+ <section class="pb-12 overflow-hidden" x-data="homeStats()" x-init="init()">
+ <div class="marquee-track">
+ <div class="marquee-content">
+ <template x-for="i in 3" :key="i">
+ <div class="marquee-group">
+ <div class="marquee-item"><span class="marquee-num" x-text="fmt(stats.guilds)"></span><span class="marquee-label">Servers</span></div>
+ <div class="marquee-item"><span class="marquee-num" x-text="fmt(stats.channels)"></span><span class="marquee-label">Channels</span></div>
+ <div class="marquee-item"><span class="marquee-num" x-text="fmt(stats.totalUsers)"></span><span class="marquee-label">Users</span></div>
+ <div class="marquee-item"><span class="marquee-num" x-text="fmt(stats.totalMessages)"></span><span class="marquee-label">Messages</span></div>
+ <div class="marquee-item marquee-divider"><i class="fas fa-bolt"></i></div>
+ </div>
+ </template>
+ </div>
+ </div>
+ </section>
+
+ <!-- CTA -->
+ <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+ <div class="relative overflow-hidden rounded-2xl p-10 sm:p-14 text-center" style="background:linear-gradient(135deg, rgba(99,102,241,.15), var(--bg-elevated), rgba(168,85,247,.1));border:1px solid rgba(99,102,241,.2)">
+ <div class="hero-glow bg-indigo-600" style="top:-100px;right:-100px;width:300px;height:300px"></div>
+ <h2 class="text-3xl font-bold mb-4 relative" style="color:var(--text-primary)">Ready to Try?</h2>
+ <p class="max-w-lg mx-auto mb-8 relative" style="color:var(--text-secondary)">Add Gapat Bot to your Discord server now, it's free!</p>
+ <a href="/login" class="relative inline-flex items-center gap-3 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-600/25">
+ <i class="fab fa-discord text-lg"></i>
+ <span>Get Started Now</span>
+ </a>
+ </div>
+ </section>
+ </div>
+
+ <!-- Footer -->
+ <footer class="border-t px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <div class="flex items-center gap-4">
+ <a href="/privacy" style="color:var(--text-muted)" class="hover:no-underline">Privacy Policy</a>
+ <a href="/terms" style="color:var(--text-muted)" class="hover:no-underline">Terms of Service</a>
+ </div>
+ </footer>
+ </div>
+
+ <script>
+ function homeStats() {
+ return {
+ stats: { guilds: 0, channels: 0, totalUsers: 0, totalMessages: 0 },
+ async init() {
+ try {
+ const data = await fetch('/api/public/stats').then(r => r.json());
+ this.stats = data;
+ } catch {}
+ }
+ };
+ }
+ </script>
+</body>
+</html>

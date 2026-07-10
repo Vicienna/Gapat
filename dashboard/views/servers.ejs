@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Servers</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="serversData()" x-init="init(); $store.user.init()" >
+ <script src="/js/app.js"></script>
+
+ <%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="color:var(--text-muted);background:var(--bg-elevated)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Servers</h1>
+ <span x-show="!loading" class="text-sm font-medium" style="color:var(--text-muted);display:none" x-text="'(' + filtered.length + ')'"></span>
+ <div class="ml-auto flex items-center gap-3 text-sm" style="color:var(--text-muted)">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username"></span>
+ <span class="hidden sm:inline" style="color:var(--text-muted)">·</span>
+ <i class="fas fa-circle text-emerald-400 text-xs"></i>
+ <span class="hidden sm:inline">Online</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(99,102,241,0.2);color:#818cf8">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.2);color:#f59e0b">Admin</span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="error" x-html="error" class="border border-[var(--border-rose)] px-5 py-3 rounded-xl mb-6" style="display:none"></div>
+
+ <div x-show="loading" class="space-y-3 py-4" style="display:none">
+ <template x-for="i in 5" :key="i">
+ <div class="flex items-center gap-4 p-4 rounded-xl" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="skel w-10 h-10 rounded-full flex-shrink-0"></div>
+ <div class="flex-1 space-y-2">
+ <div class="skel h-4 w-48"></div>
+ <div class="skel h-3 w-32"></div>
+ </div>
+ <div class="skel h-6 w-20 rounded-lg"></div>
+ </div>
+ </template>
+ <p class="text-center text-sm pt-2" style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin mr-2"></i>Loading servers...</p>
+ </div>
+
+ <div x-show="!loading" >
+ <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+ <div class="relative flex-1 w-full sm:max-w-xs">
+ <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color:var(--text-muted)"></i>
+ <input x-model="search" type="text" placeholder="Search servers by name..." class="w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" style="background:var(--bg-elevated);border-color:var(--border-color);color:var(--text-primary)">
+ </div>
+ <div class="text-sm" style="color:var(--text-muted)">
+ <span x-text="filtered.length"></span> of <span x-text="servers.length"></span> servers
+ </div>
+ </div>
+
+ <template x-if="filtered.length === 0">
+ <div class="flex flex-col items-center justify-center py-20" style="color:var(--text-muted)">
+ <i class="fas fa-server text-5xl mb-4" style="color:var(--text-muted)"></i>
+ <p class="text-lg font-medium" style="color:var(--text-secondary)" x-text="servers.length ? 'No servers match your search' : 'No servers found'"></p>
+ <p class="text-sm mt-1" x-text="servers.length ? 'Try adjusting your search term' : 'Add the bot to a Discord server to get started'"></p>
+ </div>
+ </template>
+
+ <div x-show="filtered.length" class="hidden md:block overflow-hidden rounded-xl" style="background:var(--bg-surface);border:1px solid var(--border-color);display:none">
+ <table class="w-full text-sm">
+ <thead>
+ <tr style="background:var(--bg-elevated);border-bottom:1px solid var(--border-color)">
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider w-12" style="color:var(--text-muted)"></th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted)">Server Name</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted)">ID</th>
+ <th class="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted)">Owner ID</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted)">Channels</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted)">Status</th>
+ <th class="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider" style="color:var(--text-muted)">Daily Limit</th>
+ <th class="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider w-20" style="color:var(--text-muted)">Actions</th>
+ </tr>
+ </thead>
+ <tbody style="border-color:var(--border-color)">
+ <template x-for="g in filtered" :key="g.id">
+ <tr class="transition-colors" style="border-bottom:1px solid var(--border-color)">
+ <td class="px-4 py-3">
+ <template x-if="g.icon">
+ <img :src="g.icon" alt="" class="w-8 h-8 rounded-full">
+ </template>
+ <template x-if="!g.icon">
+ <div class="w-8 h-8 rounded-full font-bold flex items-center justify-center text-sm" style="background:var(--tint-indigo);color:#818cf8"><span x-text="(g.name||'S')[0].toUpperCase()"></span></div>
+ </template>
+ </td>
+ <td class="px-4 py-3 font-medium" x-text="trunc(g.name, 30)" style="color:var(--text-primary)"></td>
+ <td class="px-4 py-3 font-mono text-xs" x-text="g.id" style="color:var(--text-muted)"></td>
+ <td class="px-4 py-3 font-mono text-xs" x-text="g.ownerId || '-'" style="color:var(--text-muted)"></td>
+ <td class="px-4 py-3 text-center">
+ <template x-if="g.channels !== undefined">
+ <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="g.channels > 0 ? 'text-emerald-400' : ''" :style="g.channels > 0 ? 'background:var(--tint-emerald);color:#34d399' : 'background:var(--bg-elevated);color:var(--text-muted)'" x-text="g.channels"></span>
+ </template>
+ <template x-if="g.channels === undefined">
+ <i class="fas fa-spinner fa-spin" style="color:var(--text-muted)"></i>
+ </template>
+ </td>
+ <td class="px-4 py-3 text-center">
+ <span class="inline-flex items-center gap-1.5 text-xs font-medium" :class="statusInfo(g).cls">
+ <i class="fas fa-circle text-[8px]" :class="statusInfo(g).icon"></i>
+ <span x-text="statusInfo(g).label"></span>
+ </span>
+ </td>
+ <td class="px-4 py-3 text-right font-medium" x-text="fmt(g.dailyRequestLimit)" style="color:var(--text-primary)"></td>
+ <td class="px-4 py-3 text-center">
+ <template x-if="g.botStatus === 'not_joined'">
+ <a :href="'https://discord.com/oauth2/authorize?client_id=1008082045647466597&scope=bot&permissions=2147483647&guild_id=' + g.guildId" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style="background:var(--bg-elevated);color:var(--text-secondary)">
+ <i class="fas fa-plus"></i>
+ <span>Invite</span>
+ </a>
+ </template>
+ <template x-if="g.botStatus === 'active' && !g.setupDone">
+ <a :href="'/servers/' + g.guildId" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style="background:var(--tint-amber);color:#fbbf24">
+ <i class="fas fa-cog"></i>
+ <span>Setup</span>
+ </a>
+ </template>
+ <template x-if="g.botStatus !== 'not_joined' && (g.botStatus !== 'active' || g.setupDone)">
+ <a :href="'/servers/' + g.guildId" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style="background:var(--tint-indigo);color:#818cf8">
+ <i class="fas fa-eye"></i>
+ <span>View</span>
+ </a>
+ </template>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <div x-show="filtered.length" class="md:hidden space-y-3" style="display:none">
+ <template x-for="g in filtered" :key="g.id">
+ <div class="rounded-xl p-4 hover:shadow-sm transition-shadow" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-3 mb-3">
+ <template x-if="g.icon">
+ <img :src="g.icon" alt="" class="w-10 h-10 rounded-full">
+ </template>
+ <template x-if="!g.icon">
+ <div class="w-10 h-10 rounded-full font-bold flex items-center justify-center text-lg" style="background:var(--tint-indigo);color:#818cf8"><span x-text="(g.name||'S')[0].toUpperCase()"></span></div>
+ </template>
+ <div class="flex-1 min-w-0">
+ <p class="font-semibold truncate" x-text="g.name" style="color:var(--text-primary)"></p>
+ <p class="text-xs font-mono" x-text="g.id" style="color:var(--text-muted)"></p>
+ </div>
+ <span class="inline-flex items-center gap-1.5 text-xs font-medium" :class="statusInfo(g).cls">
+ <i class="fas fa-circle text-[8px]" :class="statusInfo(g).icon"></i>
+ <span x-text="statusInfo(g).label"></span>
+ </span>
+ </div>
+ <div class="flex items-center gap-4 text-sm mb-3" style="color:var(--text-muted)">
+ <span>Owner: <span class="font-mono text-xs" x-text="g.ownerId || '-'"></span></span>
+ <template x-if="g.channels !== undefined">
+ <span class="inline-flex items-center gap-1">
+ <i class="fas fa-hashtag text-xs"></i>
+ <span x-text="g.channels"></span>
+ </span>
+ </template>
+ <span class="ml-auto font-medium" x-text="'Limit: ' + fmt(g.dailyRequestLimit)" style="color:var(--text-primary)"></span>
+ </div>
+ <template x-if="g.botStatus === 'not_joined'">
+ <a :href="'https://discord.com/oauth2/authorize?client_id=1008082045647466597&scope=bot&permissions=2147483647&guild_id=' + g.guildId" target="_blank" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors" style="background:var(--bg-elevated);color:var(--text-secondary)">
+ <i class="fas fa-plus"></i>
+ <span>Invite Bot</span>
+ </a>
+ </template>
+ <template x-if="g.botStatus === 'active' && !g.setupDone">
+ <a :href="'/servers/' + g.guildId" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors" style="background:var(--tint-amber);color:#fbbf24">
+ <i class="fas fa-cog"></i>
+ <span>Setup Server</span>
+ </a>
+ </template>
+ <template x-if="g.botStatus !== 'not_joined' && (g.botStatus !== 'active' || g.setupDone)">
+ <a :href="'/servers/' + g.guildId" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors" style="background:var(--tint-indigo);color:#818cf8">
+ <i class="fas fa-eye"></i>
+ <span>View Server</span>
+ </a>
+ </template>
+ </div>
+ </template>
+ </div>
+ </div>
+ </div>
+
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+ </div>
+
+ <script>
+ function serversData() {
+ return {
+ loading: true,
+ error: '',
+ search: '',
+ path: window.location.pathname,
+ servers: [],
+ get filtered() {
+ const q = this.search.toLowerCase().trim();
+ if (!q) return this.servers;
+ return this.servers.filter(g => (g.name || '').toLowerCase().includes(q));
+ },
+ async init() {
+ try {
+ const data = await fetch('/api/servers').then(r => r.json());
+ if (data.error) {
+ this.error = '❌ ' + data.error;
+ showToast('Failed to load servers', 'error');
+ }
+ if (data.discordError === 'token_expired') {
+ this.error = '⚠️ Discord session expired. <a href="/api/auth/discord" class="underline">Log in again</a> to view all servers.';
+ }
+ const servers = Array.isArray(data) ? data : (data?.guilds || []);
+ this.servers = servers.map(g => ({ ...g, channels: g.channelCount }));
+ this.loading = false;
+ } catch (e) {
+ this.error = '❌ ' + (e?.message || 'Failed to load servers');
+ showToast('Failed to load servers', 'error');
+ this.loading = false;
+ }
+ },
+
+ statusInfo(g) {
+ const s = g.botStatus || 'not_joined';
+ if (s === 'active' && g.setupDone) return { label: 'Active', cls: '', icon: 'text-emerald-400' };
+ if (s === 'active' && !g.setupDone) return { label: 'Not Active', cls: 'text-amber-500', icon: 'text-amber-400' };
+ if (s === 'banned') return { label: 'Banned', cls: '', icon: 'text-red-400' };
+ if (s === 'inactive') return { label: 'Left', cls: '', icon: '' };
+ return { label: 'Not Joined', cls: '', icon: '' };
+ }
+ };
+ }
+ </script>
+</body>
+</html>

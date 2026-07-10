@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Terms of Service</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body style="background:var(--bg-base);color:var(--text-primary)" x-data="{}" x-init="$store.user.init()">
+ <script src="/js/app.js"></script>
+
+ <%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg hover:bg-[var(--hover-bg)]">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Terms of Service</h1>
+ </header>
+
+ <!-- Content -->
+ <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+ <h1 class="text-3xl font-bold mb-2">Terms of Service</h1>
+ <p class="text-sm mb-10" style="color:var(--text-muted)">Last updated: July 2026</p>
+
+ <div class="space-y-8 text-sm leading-relaxed" style="color:var(--text-secondary)">
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">1. Acceptance of Terms</h2>
+ <p>By adding and using Gapat Bot on a Discord server, you agree to these Terms of Service. If you do not agree, do not use this bot.</p>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">2. Description of Service</h2>
+ <p>Gapat Bot is an AI chatbot for Discord that provides intelligent chat features, auto-moderation, and server analytics. The bot is available for free with certain limitations and can be upgraded as needed.</p>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">3. Permitted Use</h2>
+ <p>You agree to:</p>
+ <ul class="list-disc list-inside mt-2 space-y-1" style="color:var(--text-muted)">
+ <li>Use the bot in accordance with Discord's Terms of Service</li>
+ <li>Not abuse bot features for spam or illegal activities</li>
+ <li>Not attempt to damage, modify, or reverse engineer the bot</li>
+ <li>Not use the bot to harass or threaten other users</li>
+ </ul>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">4. Limitation of Liability</h2>
+ <p>Gapat Bot is provided"as is" without any warranty. We are not liable for:</p>
+ <ul class="list-disc list-inside mt-2 space-y-1" style="color:var(--text-muted)">
+ <li>Damage or data loss resulting from bot usage</li>
+ <li>Downtime or unavailability of service</li>
+ <li>AI-generated content that may be inaccurate or inappropriate</li>
+ <li>Actions of other users who use the bot</li>
+ </ul>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">5. Service Limitations</h2>
+ <p>We reserve the right to:</p>
+ <ul class="list-disc list-inside mt-2 space-y-1" style="color:var(--text-muted)">
+ <li>Limit bot usage if it exceeds reasonable bounds</li>
+ <li>Deny access to servers that violate the terms</li>
+ <li>Change or discontinue features at any time with notice</li>
+ <li>Update these Terms of Service from time to time</li>
+ </ul>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">6. Intellectual Property</h2>
+ <p>All rights to Gapat Bot, including code, design, and brand, belong to the developer. You may not use bot assets without written permission.</p>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">7. Termination</h2>
+ <p>We reserve the right to terminate access to the bot if these terms are violated. You may stop using the bot at any time by removing it from your Discord server.</p>
+ </section>
+
+ <section>
+ <h2 class="text-lg font-semibold mb-3" style="color:var(--text-primary)">8. Contact</h2>
+ <p>For questions or to report violations, contact us through our Discord support server.</p>
+ </section>
+ </div>
+ </div>
+
+ </div>
+</body>
+</html>

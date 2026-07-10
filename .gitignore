@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp.*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+*.js.map
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Database
+*.db
+
+# Temporary
+tmp/
+temp/
+
+# Internal docs (not for public)
+PRD.md
+AGENT.md
+SKILL.md
+.opencode/

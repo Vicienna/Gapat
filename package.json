@@ -1,0 +1,27 @@
+{
+  "name": "gapat-full",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "bot",
+    "dashboard"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:bot": "npm run build -w bot",
+    "build:dashboard": "npm run build -w dashboard",
+    "start:bot": "npm run start -w bot",
+    "start:dashboard": "npm run start -w dashboard",
+    "dev:bot": "npm run dev -w bot",
+    "dev:dashboard": "npm run dev -w dashboard",
+    "dev": "node dev.js",
+    "deploy": "npm run deploy -w bot"
+  },
+  "dependencies": {
+    "@sapphire/async-queue": "^1.5.5",
+    "@sapphire/shapeshift": "^4.0.0",
+    "@sapphire/snowflake": "^3.5.5",
+    "@vladfrangu/async_event_emitter": "^2.4.7",
+    "discord-api-types": "^0.38.49"
+  }
+}

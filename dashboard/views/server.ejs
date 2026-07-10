@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Server</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="serverData()" x-init="init(); $store.user.init()" >
+ <script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+ <div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <a href="/servers" class="p-1.5 -ml-1 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-arrow-left"></i>
+ </a>
+ <div class="flex items-center gap-2 min-w-0">
+ <h1 class="text-xl font-bold truncate" x-text="guild?.name || 'Server'" style="color:var(--text-primary)"></h1>
+ <span x-show="guild" class="hidden md:inline text-sm font-mono" x-text="guild.id" style="color:var(--text-muted)"></span>
+ </div>
+ <div x-show="!loading && guild" class="ml-auto flex items-center gap-3 text-sm">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username" style="color:var(--text-primary)"></span>
+ <span class="hidden sm:inline" style="color:var(--text-muted)">·</span>
+ <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium">
+ <i class="fas fa-circle text-[6px]" :class="isActive(guild) ? 'text-emerald-400' : 'text-red-400'"></i>
+ <span x-text="isActive(guild) ? 'Active' : 'Banned'"></span>
+ </span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium">Admin</span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="loading" class="flex items-center justify-center py-20" style="display:none;color:var(--text-muted)">
+ <i class="fas fa-spinner fa-spin text-2xl mr-3"></i>
+ <span>Loading server data...</span>
+ </div>
+
+ <div x-show="!loading && error" class="border border-[var(--border-rose)] px-5 py-3 rounded-xl mb-6" x-text="error" style="display:none;background:var(--bg-surface)"></div>
+
+ <div x-show="!loading && !error && !guild" class="flex flex-col items-center justify-center py-20" style="display:none;color:var(--text-muted)">
+ <i class="fas fa-exclamation-triangle text-5xl mb-4" style="color:var(--text-muted)"></i>
+ <p class="text-lg font-medium" style="color:var(--text-secondary)">Server not found</p>
+ <p class="text-sm mt-1">The requested server could not be found or the bot is not in it.</p>
+ <a href="/servers" class="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-sm transition-colors">
+ <i class="fas fa-arrow-left"></i>
+ <span>Back to Servers</span>
+ </a>
+ </div>
+
+ <div x-show="!loading && guild" class="space-y-6" style="display:none">
+ <div x-show="guild.useGlobalDefaults" class="border px-5 py-3 rounded-xl text-sm flex items-center gap-2" style="background:var(--bg-elevated);border-color:var(--border-color)">
+ <i class="fas fa-info-circle"></i>
+ <span>This server uses <strong>Global Defaults</strong>. Change in <a :href="'/servers/' + guildId + '/settings'" class="underline font-medium">Settings</a> for customization.</span>
+ </div>
+ <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+ <div class="stat-card rounded-xl p-5 cursor-default fade-in" style="animation-delay:0ms;background:var(--tint-violet);border:1px solid var(--border-violet)">
+ <div class="flex items-center justify-between mb-3">
+ <span class="text-xs font-medium uppercase tracking-wide" style="color:var(--text-muted)">Daily Token Limit</span>
+ <i class="fas fa-coins text-lg" style="color:#a78bfa"></i>
+ </div>
+ <p class="text-3xl font-extrabold" x-text="fmt(guild.dailyTokenLimit)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="stat-card rounded-xl p-5 cursor-default fade-in" style="animation-delay:60ms;background:var(--tint-amber);border:1px solid var(--border-amber)">
+ <div class="flex items-center justify-between mb-3">
+ <span class="text-xs font-medium uppercase tracking-wide" style="color:var(--text-muted)">Daily Request Limit</span>
+ <i class="fas fa-paper-plane text-lg" style="color:#fbbf24"></i>
+ </div>
+ <p class="text-3xl font-extrabold" x-text="fmt(guild.dailyRequestLimit)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="stat-card rounded-xl p-5 cursor-default fade-in" style="animation-delay:120ms;background:var(--tint-cyan);border:1px solid var(--border-cyan)">
+ <div class="flex items-center justify-between mb-3">
+ <span class="text-xs font-medium uppercase tracking-wide" style="color:var(--text-muted)">Per Response Token Limit</span>
+ <i class="fas fa-text-height text-lg" style="color:#22d3ee"></i>
+ </div>
+ <p class="text-3xl font-extrabold" x-text="fmt(guild.perResponseTokenLimit)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="stat-card rounded-xl p-5 cursor-default fade-in" style="animation-delay:180ms;background:var(--tint-indigo);border:1px solid var(--border-indigo)">
+ <div class="flex items-center justify-between mb-3">
+ <span class="text-xs font-medium uppercase tracking-wide" style="color:var(--text-muted)">Max Channels</span>
+ <i class="fas fa-hashtag text-lg" style="color:#818cf8"></i>
+ </div>
+ <p class="text-3xl font-extrabold" x-text="fmt(guild.maxChannels)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="stat-card rounded-xl p-5 cursor-default fade-in" style="animation-delay:240ms;background:var(--tint-emerald);border:1px solid var(--border-emerald)">
+ <div class="flex items-center justify-between mb-3">
+ <span class="text-xs font-medium uppercase tracking-wide" style="color:var(--text-muted)">Join Date</span>
+ <i class="fas fa-calendar-plus text-lg" style="color:#34d399"></i>
+ </div>
+ <p class="text-xl font-extrabold" x-text="guild.joinedAt ? timeAgo(guild.joinedAt) : '-'" style="color:var(--text-primary)"></p>
+ <p x-show="guild.joinedAt" class="text-xs mt-0.5" x-text="new Date(guild.joinedAt).toLocaleDateString()" style="color:var(--text-muted)"></p>
+ </div>
+ <div class="stat-card rounded-xl p-5 cursor-default fade-in" style="animation-delay:300ms;background:var(--tint-rose);border:1px solid var(--border-rose)">
+ <div class="flex items-center justify-between mb-3">
+ <span class="text-xs font-medium uppercase tracking-wide" style="color:var(--text-muted)">Status</span>
+ <i class="fas fa-shield-alt text-lg" style="color:#f87171"></i>
+ </div>
+ <p class="text-3xl font-extrabold" x-text="isActive(guild) ? 'Active' : 'Banned'"></p>
+ </div>
+ </div>
+
+ <p class="text-xs font-semibold uppercase tracking-wider px-1 mb-3" style="color:var(--text-secondary)">Quick Actions</p>
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+ <a :href="'/servers/' + guildId + '/channels'" class="group rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-4">
+ <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-[var(--tint-indigo)] transition-colors">
+ <i class="fas fa-hashtag"></i>
+ </div>
+ <div>
+ <h3 class="font-semibold transition-colors" style="color:var(--text-primary)">Channels</h3>
+ <p class="text-sm" style="color:var(--text-secondary)">Manage AI channels</p>
+ </div>
+ </div>
+ </a>
+ <a :href="'/servers/' + guildId + '/users'" class="group rounded-xl p-5 hover:border-emerald-300 hover:shadow-sm transition-all" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-4">
+ <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-[var(--tint-emerald)] transition-colors">
+ <i class="fas fa-users"></i>
+ </div>
+ <div>
+ <h3 class="font-semibold transition-colors" style="color:var(--text-primary)">Users</h3>
+ <p class="text-sm" style="color:var(--text-secondary)">User management & limits</p>
+ </div>
+ </div>
+ </a>
+ <a :href="'/servers/' + guildId + '/settings'" class="group rounded-xl p-5 hover:border-amber-300 hover:shadow-sm transition-all" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-4">
+ <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-[var(--tint-amber)] transition-colors">
+ <i class="fas fa-cog"></i>
+ </div>
+ <div>
+ <h3 class="font-semibold transition-colors" style="color:var(--text-primary)">Settings</h3>
+ <p class="text-sm" style="color:var(--text-secondary)">Server configuration</p>
+ </div>
+ </div>
+ </a>
+ <a :href="'/servers/' + guildId + '/analytics'" class="group rounded-xl p-5 hover:border-rose-300 hover:shadow-sm transition-all" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-4">
+ <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-[var(--tint-rose)] transition-colors">
+ <i class="fas fa-chart-line text-rose-600"></i>
+ </div>
+ <div>
+ <h3 class="font-semibold hover:text-red-400 transition-colors" style="color:var(--text-primary)">Analytics</h3>
+ <p class="text-sm" style="color:var(--text-secondary)">Usage statistics</p>
+ </div>
+ </div>
+ </a>
+ </div>
+
+ <p class="text-xs font-semibold uppercase tracking-wider px-1 mb-3" style="color:var(--text-secondary)">Danger Zone</p>
+ <div class="border border-[var(--border-rose)] rounded-xl p-5">
+ <div class="flex items-center justify-between flex-wrap gap-3">
+ <div>
+ <h3 class="font-semibold" style="color:var(--text-primary)">Reset Server Data</h3>
+ <p class="text-sm mt-0.5" style="color:var(--text-secondary)">Delete all server data — conversations, channels, and user limits. Server will be reset to fresh state.</p>
+ </div>
+ <button @click="resetServer()" :disabled="resetting" class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors">
+ <i class="fas" :class="resetting ? 'fa-spinner fa-spin' : 'fa-trash'"></i>
+ <span x-text="resetting ? 'Resetting...' : 'Reset Server Data'"></span>
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-top:1px solid var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+ </div>
+
+ <script>
+ function serverData() {
+ return {
+ loading: true,
+ error: '',
+ resetting: false,
+ path: window.location.pathname,
+ guildId: '',
+ guild: null,
+ async init() {
+ const parts = window.location.pathname.split('/').filter(Boolean);
+ this.guildId = parts[parts.length - 1];
+ if (!this.guildId) {
+ this.error = 'No server ID specified.';
+ this.loading = false;
+ return;
+ }
+ try {
+ this.guild = await API.get('/api/v1/guilds/' + this.guildId);
+ if (!this.guild || this.guild.error) {
+ this.error = (this.guild && this.guild.error) || 'Server not found.';
+ this.guild = null;
+ } else {
+ this.guild.status = this.guild.isBanned ? 'banned' : this.guild.isActive ? 'active' : 'inactive';
+ }
+ } catch (e) {
+ this.error = '❌ ' + (e?.message || 'Failed to load servers');
+ showToast('Failed to load servers', 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ isActive(g) {
+ return g?.status === 'active' || (g?.isActive && !g?.isBanned);
+ },
+ async resetServer() {
+  if (!(await confirmDialog({ title: 'Delete Server Data', message: 'Delete ALL data for this server? Conversations, channels, and user limits will be permanently deleted. This action cannot be undone.', confirmText: 'Delete', danger: true }))) return;
+ this.resetting = true;
+ try {
+ const result = await API.post('/api/v1/guilds/' + this.guildId + '/reset', {});
+ showToast('Server data reset: ' + result.deleted.conversations + ' conversations, ' + result.deleted.channels + ' channels, ' + result.deleted.userLimits + ' user limits', 'success');
+ } catch (e) {
+ showToast('Failed to reset server: ' + (e?.message || 'Unknown'), 'error');
+ } finally {
+ this.resetting = false;
+ }
+ }
+ };
+ }
+ </script>
+</body>
+</html>

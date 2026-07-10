@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — MCP Servers</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="mcpPage()" x-init="init(); $store.user.init()">
+<script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+<div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="color:var(--text-muted);background:var(--bg-elevated)"><i class="fas fa-bars text-xl"></i></button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">MCP Servers</h1>
+ <div class="ml-auto flex items-center gap-3 text-sm" style="color:var(--text-secondary)">
+ <template x-if="$store.user.avatar"><img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username"></template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username"></span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="error" x-text="error" class="error-box" style="display:none"></div>
+
+ <!-- Owner actions -->
+ <div x-show="$store.user.role === 'owner'" class="flex items-center justify-between mb-6">
+ <p class="text-sm" style="color:var(--text-secondary)">System MCP servers</p>
+ <div class="flex items-center gap-2">
+ <button @click="openAddModal()" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-colors" style="background:var(--bg-elevated);color:var(--text-primary)">
+ <i class="fas fa-plus text-xs"></i> Add MCP
+ </button>
+ <button @click="scanMCPs()" :disabled="scanning" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-colors" :style="scanning ? 'opacity:50' : ''" style="background:var(--bg-elevated);color:var(--text-primary)">
+ <i :class="scanning ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'" class="text-xs"></i> Scan
+ </button>
+ </div>
+ </div>
+
+ <!-- User: tab header -->
+ <div x-show="$store.user.role !== 'owner'" class="mb-6">
+ <p class="text-sm" style="color:var(--text-secondary)">Toggle MCP servers to use in your AI conversations</p>
+ </div>
+
+ <!-- Loading -->
+ <div x-show="loading" class="space-y-4">
+ <template x-for="i in 2" :key="i">
+ <div class="rounded-xl p-5 animate-pulse" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-center gap-4"><div class="w-12 h-12 rounded-xl" style="background:var(--bg-elevated)"></div><div class="flex-1 space-y-2"><div class="h-4 rounded w-1/3" style="background:var(--bg-elevated)"></div><div class="h-3 rounded w-1/2" style="background:var(--bg-elevated)"></div></div></div>
+ </div>
+ </template>
+ </div>
+
+ <!-- Empty state -->
+ <div x-show="!loading && servers.length === 0" class="flex flex-col items-center justify-center py-16" style="color:var(--text-muted)">
+ <i class="fas fa-server text-4xl mb-4"></i>
+ <p class="font-medium" style="color:var(--text-secondary)">No MCP servers found</p>
+ <p class="text-sm mt-1" x-show="$store.user.role === 'owner'">Click <strong>Add MCP</strong> or <strong>Scan</strong> to get started.</p>
+ </div>
+
+ <!-- Server list -->
+ <div x-show="!loading" class="grid grid-cols-1 gap-4">
+ <template x-for="s in servers" :key="s._id">
+ <div class="rounded-xl p-5 transition-all" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="flex items-start gap-4">
+ <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0" :class="s.isEnabled ? 'bg-emerald-500' : 'bg-gray-500'"><i class="fas fa-plug"></i></div>
+ <div class="flex-1 min-w-0">
+ <div class="flex items-center gap-2 flex-wrap">
+ <h3 class="font-semibold" style="color:var(--text-primary)" x-text="s.displayName || s.name"></h3>
+ <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold" :class="s.isEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'" x-text="s.isEnabled ? 'ON' : 'OFF'"></span>
+ <span x-show="s.sourcePath" class="text-[10px] px-1.5 py-0.5 rounded" style="background:var(--bg-elevated);color:var(--text-muted)" x-text="s.sourcePath ? 'file' : 'manual'"></span>
+ </div>
+ <p x-show="s.description" class="text-xs mt-0.5" style="color:var(--text-secondary)" x-text="s.description"></p>
+ <p class="text-xs font-mono mt-0.5 truncate" style="color:var(--text-muted)" x-text="(s.command || s.remoteUrl || 'N/A') + ' ' + (s.args || []).join(' ')"></p>
+ <div class="flex items-center gap-2 mt-2 flex-wrap">
+ <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs" style="color:var(--text-secondary);background:var(--bg-elevated)" x-text="toolsCount(s) + ' tools'"></span>
+ <span x-show="s.lastConnectedAt" class="text-[10px]" style="color:var(--text-muted)"><i class="fas fa-check-circle text-emerald-400 mr-0.5"></i><span x-text="timeAgo(s.lastConnectedAt)"></span></span>
+ <span x-show="s.lastError" class="text-[10px] truncate max-w-[200px]" style="color:#f87171" :title="s.lastError"><i class="fas fa-exclamation-circle mr-0.5"></i>Error</span>
+ </div>
+ <!-- Personal fields preview (owner only) -->
+ <div x-show="$store.user.role === 'owner' && s.personalFields && s.personalFields.length > 0" class="mt-3 p-3 rounded-lg" style="background:var(--bg-elevated)">
+ <p class="text-[10px] font-medium uppercase tracking-wider mb-2" style="color:var(--text-muted)">Personal Fields</p>
+ <div class="space-y-1">
+ <template x-for="f in s.personalFields" :key="f.name">
+ <div class="flex items-center gap-2 text-xs">
+ <span class="font-mono" style="color:var(--text-secondary)" x-text="f.name"></span>
+ <span x-show="f.isSecret" class="text-amber-400"><i class="fas fa-lock text-[10px]"></i></span>
+ <span style="color:var(--text-muted)" x-text="f.label || f.description"></span>
+ </div>
+ </template>
+ </div>
+ </div>
+ </div>
+ <!-- Actions -->
+ <div class="flex flex-col items-center gap-2 flex-shrink-0" @click.stop>
+ <!-- Toggle (owner: global, user: personal) -->
+ <button @click="$store.user.role === 'owner' ? toggleGlobal(s._id) : toggleUser(s)" type="button" :class="isUserEnabled(s) ? 'bg-indigo-600' : ''" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0">
+ <span :class="isUserEnabled(s) ? 'translate-x-[18px]' : 'translate-x-[2px]'" class="inline-block h-3.5 w-3.5 transform rounded-full transition-transform shadow-sm" style="background:var(--toggle-knob)"></span>
+ </button>
+ <button @click="testServer(s._id)" type="button" class="p-1.5 rounded-lg transition-colors" style="color:var(--text-muted)" title="Test"><i class="fas fa-play text-xs"></i></button>
+ <!-- Owner-only actions -->
+ <template x-if="$store.user.role === 'owner'">
+ <div class="flex flex-col items-center gap-2">
+ <button @click="debugServer(s._id)" type="button" class="p-1.5 rounded-lg transition-colors" style="color:var(--text-muted)" title="Debug"><i class="fas fa-bug text-xs"></i></button>
+ <button @click="openEditModal(s)" type="button" class="p-1.5 rounded-lg transition-colors" style="color:var(--text-muted)" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+ <button @click="deleteServer(s)" type="button" class="p-1.5 rounded-lg transition-colors" style="color:#f87171" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+ </div>
+ </template>
+ </div>
+ </div>
+ </div>
+ </template>
+ </div>
+ </div>
+
+ <!-- Footer -->
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-color:var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null"><span><i class="fas fa-spinner fa-spin mr-1"></i>Checking...</span></template>
+ <template x-if="health === true"><span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>Online</span></template>
+ <template x-if="health === false"><span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>Offline</span></template>
+ </span>
+ </footer>
+</div>
+
+<!-- Add/Edit Modal -->
+<div x-show="showModal" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.6)">
+ <div @click.away="showModal = false" class="w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <h2 class="text-lg font-bold mb-4" style="color:var(--text-primary)" x-text="editingId ? 'Edit MCP Server' : 'Add MCP Server'"></h2>
+ <div class="space-y-4">
+  <div>
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Name *</label>
+   <input x-model="form.name" type="text" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder="e.g. ddg-search">
+  </div>
+  <div>
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Display Name</label>
+   <input x-model="form.displayName" type="text" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder="e.g. DuckDuckGo Search">
+  </div>
+  <div>
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Description</label>
+   <input x-model="form.description" type="text" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder="Search the web...">
+  </div>
+  <div class="flex gap-3">
+   <div class="flex-1">
+    <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Command</label>
+    <input x-model="form.command" type="text" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder="python3">
+   </div>
+   <div class="flex-1">
+    <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Args (JSON array)</label>
+    <input x-model="form.argsStr" type="text" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder='["server.py"]'>
+   </div>
+  </div>
+  <div>
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Transport Type</label>
+   <select x-model="form.transportType" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)">
+    <option value="stdio">stdio</option>
+    <option value="streamable-http">streamable-http</option>
+    <option value="sse">sse</option>
+   </select>
+  </div>
+  <div x-show="form.transportType !== 'stdio'">
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Remote URL</label>
+   <input x-model="form.remoteUrl" type="text" class="w-full px-3 py-2 rounded-lg text-sm" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder="https://...">
+  </div>
+  <div>
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Env Vars (JSON object)</label>
+   <textarea x-model="form.envStr" rows="3" class="w-full px-3 py-2 rounded-lg text-sm font-mono" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder='{"API_KEY": "xxx"}'></textarea>
+  </div>
+  <div>
+   <label class="block text-xs font-medium mb-1" style="color:var(--text-secondary)">Personal Fields (JSON array)</label>
+   <textarea x-model="form.personalFieldsStr" rows="3" class="w-full px-3 py-2 rounded-lg text-sm font-mono" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-color)" placeholder='[{"name":"API_KEY","label":"Your API Key","isSecret":true}]'></textarea>
+  </div>
+ </div>
+ <div class="flex items-center gap-3 mt-6">
+  <button @click="showModal = false" type="button" class="px-4 py-2 text-sm font-medium rounded-xl" style="background:var(--bg-elevated);color:var(--text-primary)">Cancel</button>
+  <button @click="saveServer()" type="button" :disabled="saving" class="px-4 py-2 text-sm font-medium rounded-xl bg-indigo-600 text-white" :class="saving ? 'opacity-50' : ''">
+   <span x-text="saving ? 'Saving...' : (editingId ? 'Update' : 'Add')"></span>
+  </button>
+ </div>
+ </div>
+</div>
+
+<script>
+function mcpPage() {
+ return {
+  error: '',
+  loading: true,
+  scanning: false,
+  servers: [],
+  showModal: false,
+  saving: false,
+  editingId: null,
+  form: { name: '', displayName: '', description: '', command: '', argsStr: '[]', transportType: 'stdio', remoteUrl: '', envStr: '{}', personalFieldsStr: '[]' },
+
+  async init() {
+   try {
+    const data = await API.get('/api/v1/mcp');
+    this.servers = Array.isArray(data) ? data : [];
+   } catch { this.error = 'Failed to load MCP servers'; }
+   finally { this.loading = false; }
+  },
+
+  toolsCount(s) {
+   return (s.tools || []).length || (s.toolDescriptions ? Object.keys(s.toolDescriptions).length : 0);
+  },
+
+  isUserEnabled(s) {
+   return s.isEnabled;
+  },
+
+  async scanMCPs() {
+   this.scanning = true;
+   try {
+    const result = await API.post('/api/v1/mcp/scan', {});
+    const msg = `Scan: ${result.added?.length || 0} added, ${result.updated?.length || 0} updated`;
+    if (result.errors?.length) showToast(msg + ` (${result.errors.length} errors)`, 'warning');
+    else showToast(msg, 'success');
+    await this.init();
+   } catch (e) { showToast(e?.message || 'Scan failed', 'error'); }
+   finally { this.scanning = false; }
+  },
+
+  async toggleGlobal(id) {
+   try { await API.patch('/api/v1/mcp/' + id + '/toggle'); await this.init(); } catch (e) { showToast(e?.message || 'Failed', 'error'); }
+  },
+
+  async toggleUser(s) {
+   try { await API.patch('/api/v1/mcp/' + s._id + '/toggle'); await this.init(); } catch (e) { showToast(e?.message || 'Failed', 'error'); }
+  },
+
+  async testServer(id) {
+   showToast('Testing...', 'info');
+   try {
+    const res = await API.post('/api/v1/mcp/' + id + '/test');
+    if (res.ok) {
+     showToast(`Connected! Tools: ${(res.tools || []).join(', ') || 'none'}`, 'success');
+    } else {
+     showToast('Failed: ' + (res.error || 'unknown'), 'error');
+    }
+   } catch (e) { showToast(e?.message || 'Failed', 'error'); }
+  },
+
+  async debugServer(id) {
+   showToast('Running debug...', 'info');
+   try {
+    const res = await API.post('/api/v1/mcp/' + id + '/debug');
+    if (res.ok) {
+     const tools = (res.tools || []).join(', ') || 'none';
+     const result = res.toolResult ? `\nResult: ${res.toolResult.substring(0, 200)}` : '';
+     showToast(`Debug OK! Tools: ${tools}${result}`, 'success');
+    } else {
+     showToast('Debug failed: ' + (res.error || 'unknown'), 'error');
+    }
+   } catch (e) { showToast(e?.message || 'Debug failed', 'error'); }
+  },
+
+  openAddModal() {
+   this.editingId = null;
+   this.form = { name: '', displayName: '', description: '', command: '', argsStr: '[]', transportType: 'stdio', remoteUrl: '', envStr: '{}', personalFieldsStr: '[]' };
+   this.showModal = true;
+  },
+
+  openEditModal(s) {
+   this.editingId = s._id;
+   this.form = {
+    name: s.name || '',
+    displayName: s.displayName || '',
+    description: s.description || '',
+    command: s.command || '',
+    argsStr: JSON.stringify(s.args || []),
+    transportType: s.transportType || 'stdio',
+    remoteUrl: s.remoteUrl || '',
+    envStr: JSON.stringify(s.env instanceof Map ? Object.fromEntries(s.env) : (s.env || {}), null, 2),
+    personalFieldsStr: JSON.stringify(s.personalFields || [], null, 2),
+   };
+   this.showModal = true;
+  },
+
+  async saveServer() {
+   if (!this.form.name.trim()) return showToast('Name is required', 'error');
+   this.saving = true;
+   try {
+    let args = [], env = {}, personalFields = [];
+    try { args = JSON.parse(this.form.argsStr); } catch { return showToast('Args must be valid JSON array', 'error'); }
+    try { env = JSON.parse(this.form.envStr); } catch { return showToast('Env must be valid JSON object', 'error'); }
+    try { personalFields = JSON.parse(this.form.personalFieldsStr); } catch { return showToast('Personal fields must be valid JSON array', 'error'); }
+
+    const body = {
+     name: this.form.name.trim(),
+     displayName: this.form.displayName.trim() || this.form.name.trim(),
+     description: this.form.description.trim(),
+     command: this.form.command.trim(),
+     args,
+     env,
+     transportType: this.form.transportType,
+     remoteUrl: this.form.remoteUrl.trim(),
+     personalFields,
+    };
+
+    if (this.editingId) {
+     await API.patch('/api/v1/mcp/' + this.editingId, body);
+     showToast('Updated!', 'success');
+    } else {
+     await API.post('/api/v1/mcp', body);
+     showToast('Added!', 'success');
+    }
+    this.showModal = false;
+    await this.init();
+   } catch (e) { showToast(e?.message || 'Failed', 'error'); }
+   finally { this.saving = false; }
+  },
+
+  async deleteServer(s) {
+   const ok = await confirmDialog({ title: 'Delete MCP Server', message: `Delete "${s.displayName || s.name}"? This cannot be undone.`, confirmText: 'Delete', danger: true });
+   if (!ok) return;
+   try {
+    await API.del('/api/v1/mcp/' + s._id);
+    showToast('Deleted', 'success');
+    await this.init();
+   } catch (e) { showToast(e?.message || 'Failed', 'error'); }
+  },
+ };
+}
+</script>
+</body>
+</html>

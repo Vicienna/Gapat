@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gapat Bot — Analytics</title>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.skeleton{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0,.08) 50%,rgba(0,0,0,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{background-position:200% 0}to{background-position:-200% 0}}
+</style>
+</head>
+<body class="min-h-screen" style="background:var(--bg-base);color:var(--text-primary)" x-data="globalAnalytics()" x-init="init(); $store.user.init()" >
+<script src="/js/app.js"></script>
+
+<%- include('partials/sidebar') %>
+
+<div class="main-content min-h-screen flex flex-col" :class="{ 'full': !$store.app.sidebarOpen }">
+ <header class="sticky top-0 z-30 px-4 md:px-8 py-4 flex items-center gap-4" style="background:var(--header-bg);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px)">
+ <button @click="$store.app.toggleSidebar()" class="p-2 -ml-2 rounded-lg" style="background:var(--bg-elevated);color:var(--text-muted)">
+ <i class="fas fa-bars text-xl"></i>
+ </button>
+ <h1 class="text-xl font-bold" style="color:var(--text-primary)">Global Analytics</h1>
+ <div class="ml-auto flex items-center gap-3 text-sm">
+ <template x-if="$store.user.avatar">
+ <img :src="$store.user.avatar" class="w-7 h-7 rounded-full" :alt="$store.user.username">
+ </template>
+ <span class="hidden sm:inline font-medium" x-text="$store.user.username" style="color:var(--text-secondary)"></span>
+ <span class="hidden sm:inline" style="color:var(--text-muted)">·</span>
+ <i class="fas fa-circle text-emerald-500 text-xs"></i>
+ <span class="hidden sm:inline" style="color:var(--text-secondary)">Online</span>
+ <span x-show="$store.user.role === 'owner'" class="px-2 py-0.5 rounded-full text-xs font-medium">Owner</span>
+ <span x-show="$store.user.role === 'admin'" class="px-2 py-0.5 rounded-full text-xs font-medium">Admin</span>
+ </div>
+ </header>
+
+ <div class="p-4 md:p-8 flex-1">
+ <div x-show="loading" class="space-y-6" style="display:none">
+ <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+ <template x-for="i in 4" :key="i">
+ <div class="skeleton rounded-xl p-5" style="height:100px"></div>
+ </template>
+ </div>
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <template x-for="i in 2" :key="i">
+ <div><div class="skeleton rounded-t-xl px-5 py-3" style="height:44px"></div><div class="skeleton rounded-b-xl px-4 py-4" style="height:280px"></div></div>
+ </template>
+ </div>
+ <div><div class="skeleton rounded-t-xl px-5 py-3" style="height:44px"></div><div class="skeleton rounded-b-xl px-4 py-4" style="height:280px"></div></div>
+ </div>
+
+ <div x-show="!loading && error" class="border px-5 py-4 rounded-xl mb-6 flex items-center gap-3" x-text="error" style="display:none;background:var(--bg-surface);border-color:var(--border-color)">
+ <i class="fas fa-exclamation-triangle"></i>
+ <span x-text="error"></span>
+ </div>
+
+ <div x-show="!loading && !error && empty" class="flex flex-col items-center justify-center py-20" style="display:none;color:var(--text-muted)">
+ <i class="fas fa-chart-line text-5xl mb-4" style="color:var(--text-muted)"></i>
+ <p class="text-lg font-medium mb-1" style="color:var(--text-secondary)">No analytics data yet</p>
+ <p class="text-sm mt-1" style="color:var(--text-muted)">Start using the bot to see analytics.</p>
+ </div>
+
+ <div x-show="!loading && !error && !empty" style="display:none">
+ <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+ <div class="rounded-xl p-5" style="background:var(--tint-indigo);border:1px solid var(--border-indigo)">
+ <p class="text-xs font-medium" style="color:var(--text-secondary)">Total Messages</p>
+ <p class="text-2xl font-extrabold mt-1" x-text="fmt(data?.totalMessages)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="rounded-xl p-5" style="background:var(--tint-emerald);border:1px solid var(--border-emerald)">
+ <p class="text-xs font-medium" style="color:var(--text-secondary)">Total Tokens</p>
+ <p class="text-2xl font-extrabold mt-1" x-text="fmt(data?.totalTokens)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="rounded-xl p-5" style="background:var(--tint-amber);border:1px solid var(--border-amber)">
+ <p class="text-xs font-medium" style="color:var(--text-secondary)">Total Cost</p>
+ <p class="text-2xl font-extrabold mt-1" x-text="'$' + (data?.totalCost || 0).toFixed(4)" style="color:var(--text-primary)"></p>
+ </div>
+ <div class="rounded-xl p-5" style="background:var(--tint-violet);border:1px solid var(--border-violet)">
+ <p class="text-xs font-medium" style="color:var(--text-secondary)">Total Guilds</p>
+ <p class="text-2xl font-extrabold mt-1" x-text="data?.guilds || 0" style="color:var(--text-primary)"></p>
+ </div>
+ </div>
+
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+ <div class="rounded-xl overflow-hidden shadow-sm" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="px-5 py-3 border-b flex items-center gap-2" style="border-color:var(--border-color)">
+ <i class="fas fa-chart-line text-indigo-500 text-sm"></i>
+ <h3 class="font-semibold text-sm" style="color:var(--text-secondary)">Messages Over Time</h3>
+ </div>
+ <div class="p-4" style="height:280px"><canvas id="chartMessages"></canvas></div>
+ </div>
+ <div class="rounded-xl overflow-hidden shadow-sm" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="px-5 py-3 border-b flex items-center gap-2" style="border-color:var(--border-color)">
+ <i class="fas fa-coins text-emerald-500 text-sm"></i>
+ <h3 class="font-semibold text-sm" style="color:var(--text-secondary)">Tokens Over Time</h3>
+ </div>
+ <div class="p-4" style="height:280px"><canvas id="chartTokens"></canvas></div>
+ </div>
+ </div>
+
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+ <div class="rounded-xl overflow-hidden shadow-sm" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="px-5 py-3 border-b flex items-center gap-2" style="border-color:var(--border-color)">
+ <i class="fas fa-trophy text-amber-500 text-sm"></i>
+ <h3 class="font-semibold text-sm" style="color:var(--text-secondary)">Top Servers by Messages</h3>
+ </div>
+ <div class="p-4" style="height:280px"><canvas id="chartServers"></canvas></div>
+ </div>
+ <div class="rounded-xl overflow-hidden shadow-sm" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="px-5 py-3 border-b flex items-center gap-2" style="border-color:var(--border-color)">
+ <i class="fas fa-chart-pie text-rose-500 text-sm"></i>
+ <h3 class="font-semibold text-sm" style="color:var(--text-secondary)">Provider Usage Distribution</h3>
+ </div>
+ <div class="p-4" style="height:280px"><canvas id="chartProviders"></canvas></div>
+ </div>
+ </div>
+
+ <div class="rounded-xl overflow-hidden shadow-sm" style="background:var(--bg-surface);border:1px solid var(--border-color)">
+ <div class="px-5 py-3 border-b flex items-center gap-2" style="border-color:var(--border-color)">
+ <i class="fas fa-clock text-cyan-500 text-sm"></i>
+ <h3 class="font-semibold text-sm" style="color:var(--text-secondary)">Hourly Activity Distribution</h3>
+ </div>
+ <div class="p-4" style="height:280px"><canvas id="chartHourly"></canvas></div>
+ </div>
+
+ <div x-show="!loading && !error && $store.user.role === 'owner'" class="px-4 md:px-8 pb-8" style="display:none">
+ <p class="text-xs font-semibold uppercase tracking-wider px-1 mb-3" style="color:var(--text-secondary)">Danger Zone</p>
+ <div class="border border-[var(--border-rose)] rounded-xl p-5">
+ <div class="flex items-center justify-between flex-wrap gap-3">
+ <div>
+ <h3 class="font-semibold" style="color:var(--text-primary)">Reset All Data</h3>
+  <p class="text-sm mt-0.5" style="color:var(--text-secondary)">Delete ALL data — conversations, channels, user limits, and server limits across all servers. Server (guild) data is preserved.</p>
+ </div>
+ <button @click="resetAllData()" :disabled="resetting" class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors">
+ <i class="fas" :class="resetting ? 'fa-spinner fa-spin' : 'fa-trash'"></i>
+ <span x-text="resetting ? 'Resetting...' : 'Reset All Data'"></span>
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <footer class="px-4 md:px-8 py-4 flex items-center justify-between text-xs" style="border-top:1px solid var(--border-color);background:var(--bg-surface);color:var(--text-muted)">
+ <span>&copy; 2026 Gapat Bot</span>
+ <span x-data="healthFooter()" x-init="init()">
+ <template x-if="health === null">
+ <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking API...</span>
+ </template>
+ <template x-if="health === true">
+ <span><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>API Online</span>
+ </template>
+ <template x-if="health === false">
+ <span><i class="fas fa-circle text-red-400 text-[8px] mr-1"></i>API Offline</span>
+ </template>
+ </span>
+ </footer>
+</div>
+
+<script>
+function globalAnalytics() {
+ return {
+ loading: true,
+ error: '',
+ data: null,
+ empty: false,
+ resetting: false,
+ path: window.location.pathname,
+ async init() {
+ try {
+ const d = await API.get('/api/v1/analytics/overview');
+ this.data = d;
+ if (!d || !d.totalMessages || d.totalMessages === 0) {
+ this.empty = true;
+ } else {
+ setTimeout(() => this.buildCharts(), 150);
+ }
+ } catch (e) {
+ this.error = 'Failed to load analytics: ' + (e?.message || 'Unknown error');
+ showToast(this.error, 'error');
+ } finally {
+ this.loading = false;
+ }
+ },
+ destroyCharts() {
+ for (let i = 1; i <= 5; i++) { const k = 'myChart' + i; if (window[k]) { window[k].destroy(); window[k] = null; } }
+ },
+ buildCharts() {
+ this.destroyCharts();
+ const d = this.data;
+ if (!d) return;
+ const isDark = !document.documentElement.classList.contains('light'); const gc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'; const tc = isDark ? '#9ca3af' : '#6b7280';
+
+ if (d.messagesByDay && d.messagesByDay.length) {
+ const el = document.getElementById('chartMessages'); if (!el) return;
+ window.myChart1 = new Chart(el.getContext('2d'), {
+ type: 'line',
+ data: { labels: d.messagesByDay.map(i => i.date?.slice(5) || i._id?.slice(5) || i._id), datasets: [{ label: 'Messages', data: d.messagesByDay.map(i => i.count), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.12)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#6366f1', borderWidth: 2 }] },
+ options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: gc }, ticks: { color: tc, maxTicksLimit: 10 } }, y: { grid: { color: gc }, ticks: { color: tc, callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v }, beginAtZero: true } } }
+ });
+ }
+ if (d.tokensByDay && d.tokensByDay.length) {
+ const el = document.getElementById('chartTokens'); if (!el) return;
+ window.myChart2 = new Chart(el.getContext('2d'), {
+ type: 'line',
+ data: { labels: d.tokensByDay.map(i => i.date?.slice(5) || i._id?.slice(5) || i._id), datasets: [{ label: 'Tokens', data: d.tokensByDay.map(i => i.count), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#10b981', borderWidth: 2 }] },
+ options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: gc }, ticks: { color: tc, maxTicksLimit: 10 } }, y: { grid: { color: gc }, ticks: { color: tc, callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v }, beginAtZero: true } } }
+ });
+ }
+ if (d.topGuilds && d.topGuilds.length) {
+ const el = document.getElementById('chartServers'); if (!el) return;
+ const top = d.topGuilds.slice(0, 10).reverse();
+ window.myChart3 = new Chart(el.getContext('2d'), {
+ type: 'bar',
+ data: { labels: top.map(i => i.name || i._id), datasets: [{ label: 'Messages', data: top.map(i => i.messageCount || i.count), backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 }] },
+ options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: gc }, ticks: { color: tc, callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v }, beginAtZero: true }, y: { grid: { display: false }, ticks: { color: tc } } } }
+ });
+ }
+ if (d.providerUsage && d.providerUsage.length) {
+ const el = document.getElementById('chartProviders'); if (!el) return;
+ const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#14b8a6'];
+ window.myChart4 = new Chart(el.getContext('2d'), {
+ type: 'doughnut',
+ data: { labels: d.providerUsage.map(i => i._id), datasets: [{ data: d.providerUsage.map(i => i.count), backgroundColor: d.providerUsage.map((_, i) => colors[i % colors.length]), borderWidth: 0 }] },
+ options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: tc, padding: 16, usePointStyle: true } } } }
+ });
+ }
+ if (d.hourlyDistribution && d.hourlyDistribution.length) {
+ const el = document.getElementById('chartHourly'); if (!el) return;
+ const map = {}; d.hourlyDistribution.forEach(h => { map[h._id] = h.count; });
+ const data = Array.from({length: 24}, (_, i) => map[i] || 0);
+ window.myChart5 = new Chart(el.getContext('2d'), {
+ type: 'bar',
+ data: { labels: Array.from({length: 24}, (_, i) => i + ':00'), datasets: [{ label: 'Messages', data, backgroundColor: 'rgba(99,102,241,0.6)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 3 }] },
+ options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: gc }, ticks: { color: tc, maxTicksLimit: 12 } }, y: { grid: { color: gc }, ticks: { color: tc, beginAtZero: true } } } }
+ });
+ }
+ },
+ async resetAllData() {
+ if (!await confirmDialog({ title: 'Reset All Data', message: 'Are you sure you want to delete ALL data across all servers? All conversations, channels, user limits, and server limits will be permanently deleted! This action CANNOT be undone!', confirmText: 'Reset All Data', danger: true })) return;
+  if (!await confirmDialog({ title: 'Double Confirmation', message: 'Are you sure you want to continue? All data on all servers will be lost!', confirmText: 'Yes, Delete Everything', danger: true })) return;
+ this.resetting = true;
+ try {
+ const result = await API.post('/api/v1/reset/all', {});
+ showToast('All data deleted: ' + result.deleted.conversations + ' conversations, ' + result.deleted.channels + ' channels, ' + result.deleted.userLimits + ' user limits, ' + result.deleted.serverLimits + ' server limits', 'success');
+ this.empty = true;
+ this.data = null;
+ this.destroyCharts();
+ } catch (e) {
+ showToast('Failed to reset all: ' + (e?.message || 'Unknown'), 'error');
+ } finally {
+ this.resetting = false;
+ }
+ }
+ };
+}
+</script>
+</body>
+</html>

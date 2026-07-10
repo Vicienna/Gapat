@@ -1,0 +1,89 @@
+<div x-show="$store.app.sidebarOpen && window.innerWidth < 768" @click="$store.app.toggleSidebar()" class="fixed inset-0 z-40 md:hidden" style="display:none;background:rgba(0,0,0,.6)"></div>
+
+<nav class="sidebar fixed md:fixed top-0 left-0 h-full border-r p-4 flex flex-col overflow-y-auto z-50" :class="{ 'open': $store.app.sidebarOpen, 'closed': !$store.app.sidebarOpen }" style="width:260px;background:var(--bg-surface);border-color:var(--border-color)">
+  <div class="flex items-center justify-between px-2 mb-8">
+    <div class="flex items-center gap-3 min-w-0">
+      <template x-if="$store.app.logoUrl">
+        <img :src="$store.app.logoUrl" alt="Logo" class="w-9 h-9 rounded-xl flex-shrink-0 object-contain" style="background:var(--accent-bg);border:1px solid rgba(99,102,241,.3)">
+      </template>
+      <template x-if="!$store.app.logoUrl">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:var(--accent-bg);border:1px solid rgba(99,102,241,.3)">
+          <i class="fas fa-bolt" style="color:var(--accent)"></i>
+        </div>
+      </template>
+      <span class="text-lg font-bold truncate" style="color:var(--text-primary)" x-text="$store.app.brandName || 'Gapat Bot'"></span>
+    </div>
+    <button @click="$store.app.toggleSidebar()" class="close-btn w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="color:var(--text-muted)">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+ <div class="space-y-0.5 flex-1">
+
+ <!-- NAVIGATION (auth only) -->
+ <template x-if="$store.user.userId">
+ <div x-data="{ open: true }">
+ <button @click="open = !open" class="section-header">
+ <span>Navigation</span>
+ <i :class="open ? 'fa-chevron-down' : 'fa-chevron-right'" class="fas text-[10px]"></i>
+ </button>
+ <div x-show="open" class="space-y-0.5 mt-1">
+ <a href="/dashboard" class="sidebar-link<%= path === '/dashboard' ? ' active' : '' %>"><i class="fas fa-home w-5 text-center"></i><span><%= typeof sidebarTitle !== 'undefined' ? sidebarTitle : 'Dashboard' %></span></a>
+ <a href="/servers" class="sidebar-link<%= path.startsWith('/servers') ? ' active' : '' %>"><i class="fas fa-server w-5 text-center"></i><span>Servers</span></a>
+ </div>
+ </div>
+ </template>
+
+ <!-- GENERAL -->
+ <div x-data="{ open: <%= ['/','/commands','/status','/privacy','/terms'].includes(path) ? 'true' : 'false' %> }">
+ <button @click="open = !open" class="section-header">
+ <span>General</span>
+ <i :class="open ? 'fa-chevron-down' : 'fa-chevron-right'" class="fas text-[10px]"></i>
+ </button>
+ <div x-show="open" class="space-y-0.5 mt-1">
+ <a href="/" class="sidebar-link<%= path === '/' ? ' active' : '' %>"><i class="fas fa-globe w-5 text-center"></i><span>Home</span></a>
+ <a href="/commands" class="sidebar-link<%= path === '/commands' ? ' active' : '' %>"><i class="fas fa-terminal w-5 text-center"></i><span>Commands</span></a>
+ <a href="/status" class="sidebar-link<%= path === '/status' ? ' active' : '' %>"><i class="fas fa-heart-pulse w-5 text-center"></i><span>Status</span></a>
+ <a href="/invite" class="sidebar-link"><i class="fas fa-plus-circle w-5 text-center"></i><span>Invite</span></a>
+ <a href="/privacy" class="sidebar-link<%= path === '/privacy' ? ' active' : '' %>"><i class="fas fa-shield w-5 text-center"></i><span>Privacy</span></a>
+ <a href="/terms" class="sidebar-link<%= path === '/terms' ? ' active' : '' %>"><i class="fas fa-file-lines w-5 text-center"></i><span>Terms</span></a>
+ </div>
+ </div>
+
+ <!-- SETTINGS (owner only) -->
+ <template x-if="$store.user.role === 'owner'">
+ <div x-data="{ open: true }">
+ <button @click="open = !open" class="section-header">
+ <span>Settings</span>
+ <i :class="open ? 'fa-chevron-down' : 'fa-chevron-right'" class="fas text-[10px]"></i>
+ </button>
+ <div x-show="open" class="space-y-0.5 mt-1">
+ <a x-show="$store.user.role === 'owner'" href="/settings/providers" class="sidebar-link<%= path === '/settings/providers' || path.startsWith('/settings/providers/') ? ' active' : '' %>"><i class="fas fa-cloud w-5 text-center"></i><span>Providers</span></a>
+ <a x-show="$store.user.role === 'owner'" href="/settings/models" class="sidebar-link<%= path === '/settings/models' ? ' active' : '' %>"><i class="fas fa-cube w-5 text-center"></i><span>Models</span></a>
+ <a x-show="$store.user.role === 'owner'" href="/settings/defaults" class="sidebar-link<%= path === '/settings/defaults' ? ' active' : '' %>"><i class="fas fa-sliders-h w-5 text-center"></i><span>Defaults</span></a>
+ <a x-show="$store.user.role === 'owner'" href="/settings/analytics" class="sidebar-link<%= path === '/settings/analytics' ? ' active' : '' %>"><i class="fas fa-chart-bar w-5 text-center"></i><span>Analytics</span></a>
+ <a x-show="$store.user.role === 'owner'" href="/settings/mcps" class="sidebar-link<%= path === '/settings/mcps' ? ' active' : '' %>"><i class="fas fa-plug w-5 text-center"></i><span>MCP Servers</span></a>
+ </div>
+ </div>
+ </template>
+
+ </div>
+
+ <!-- Theme Toggle -->
+ <button @click="$store.app.toggleDarkMode()" class="theme-toggle">
+ <span><i :class="$store.app.darkMode ? 'fa-moon' : 'fa-sun'" class="fas w-5 text-center"></i><span x-text="$store.app.darkMode ? 'Dark Mode' : 'Light Mode'"></span></span>
+ <span class="text-xs"><i :class="$store.app.darkMode ? 'fa-toggle-on' : 'fa-toggle-off'" class="fas" style="color:var(--accent)"></i></span>
+ </button>
+
+ <!-- Login / Sign Out -->
+ <template x-if="$store.user.userId">
+ <button onclick="fetch('/api/auth/logout',{method:'POST'}).then(()=>window.location.href='/login')" class="sidebar-link mt-1" style="color:var(--text-muted)">
+ <i class="fas fa-sign-out-alt w-5 text-center"></i><span>Sign Out</span>
+ </button>
+ </template>
+ <template x-if="!$store.user.userId">
+ <a href="/login" class="sidebar-link mt-1">
+ <i class="fab fa-discord w-5 text-center" style="color:#5865f2"></i><span>Login</span>
+ </a>
+ </template>
+</nav>
