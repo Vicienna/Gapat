@@ -210,7 +210,7 @@ export async function handleMessage(message: Message) {
   }
 
   // ─── Broadcast (active until July 30, 2026) ────────────────────
-  const BROADCAST_EXPIRY = new Date('2026-07-30T00:00:00Z');
+  const BROADCAST_EXPIRY = new Date('2026-08-17T00:00:00Z');
   if (Date.now() < BROADCAST_EXPIRY.getTime()) {
     try {
       const guildId = message.guildId!;
