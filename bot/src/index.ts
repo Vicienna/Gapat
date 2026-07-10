@@ -122,6 +122,7 @@ client.on('error', (err) => {
 
 client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Gapat Bot online as ${c.user.username}`);
+  console.log(`Logged in as ${c.user.tag}`);
   await seedProviders();
   await seedMCPServers();
 
