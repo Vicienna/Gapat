@@ -35,6 +35,7 @@ export function createApiServer(client?: Client) {
       discord: client ? (client.ws.status === 0 ? 'connected' : 'disconnected') : 'unknown',
     });
   };
+  app.get('/', healthHandler);
   app.get('/health', healthHandler);
   app.get('/api/v1/health', healthHandler);
 
