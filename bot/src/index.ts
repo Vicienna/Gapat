@@ -116,6 +116,13 @@ const client = new Client({
   ],
 });
 
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Rejection:', reason instanceof Error ? reason.message : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Uncaught Exception:', err.message, err.stack);
+});
+
 client.on('error', (err) => {
   console.error('⚠️ Client error:', err.message);
 });

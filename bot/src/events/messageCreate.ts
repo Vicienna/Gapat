@@ -179,7 +179,19 @@ web_search("weather in Tokyo")
 }
 
 export async function handleMessage(message: Message) {
-  if (message.author.bot || !message.inGuild() || message.system) return;
+  if (message.author.bot || message.system) return;
+
+  // Owner-only reset broadcast command
+  const OWNER_ID = process.env.DISCORD_OWNER_ID || '';
+  if (message.content === '!resetbroadcast' && message.author.id === OWNER_ID) {
+    const { Broadcast } = await import('../models/Broadcast');
+    const result = await Broadcast.deleteMany({ userId: OWNER_ID });
+    const reply = await message.reply(`✅ Reset ${result.deletedCount} broadcast record(s) for owner.`);
+    setTimeout(() => reply.delete().catch(() => {}), 5000);
+    return;
+  }
+
+  if (!message.inGuild()) return;
 
   const isLoggedIn = await checkLogin(message.author.id);
   if (!isLoggedIn) {
