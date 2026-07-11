@@ -209,34 +209,37 @@ export async function handleMessage(message: Message) {
     return;
   }
 
-  // ─── Broadcast (active until July 30, 2026) ────────────────────
+  // ─── Broadcast (active until Aug 17, 2026) ────────────────────
   const BROADCAST_EXPIRY = new Date('2026-08-17T00:00:00Z');
   if (Date.now() < BROADCAST_EXPIRY.getTime()) {
     try {
       const guildId = message.guildId!;
       const setupChannels = await Channel.countDocuments({ guildId, isEnabled: true });
       if (setupChannels === 0) {
-        const alreadyReceived = await hasReceivedBroadcast(message.author.id);
+        const alreadyReceived = await hasReceivedBroadcast(message.author.id, guildId);
         if (!alreadyReceived) {
           const member = message.member;
           const isAdmin = member?.permissions.has(PermissionFlagsBits.ManageGuild) ?? false;
+          const guildName = message.guild?.name || 'this server';
 
           const broadcastEmbed = isAdmin
             ? new EmbedBuilder()
                 .setColor(0x6366f1)
                 .setDescription(
-                  '**Gapat is back online!** Let\'s set up.\n\n' +
-                  'Use ` /help` to get started with setup.\n\n' +
-                  '-# If Gapat is not set up within **24 hours**, it will leave this server automatically.'
+                  '**Gapat is back online!**\n\n' +
+                  `Set up Gapat in **${guildName}** to start using it.\n` +
+                  'Use `/help` for assistance.'
                 )
                 .setTimestamp()
             : new EmbedBuilder()
                 .setColor(0xf59e0b)
-                .setDescription('**Gapat is back online!** Contact the server admin to complete the setup.')
+                .setDescription(
+                  '**Gapat is back online!**\n\n' +
+                  `Please contact your server admin in **${guildName}** to set up the bot.`
+                )
                 .setTimestamp();
 
           await message.author.send({ embeds: [broadcastEmbed] }).catch(() => {
-            // DM failed (user has DMs disabled) — send in-channel with auto-delete as fallback
             message.reply({ embeds: [broadcastEmbed] }).then(m => setTimeout(() => m.delete().catch(() => {}), 30000));
           });
           if (isAdmin) await startLeaveTimer(guildId);

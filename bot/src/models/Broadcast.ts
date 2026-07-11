@@ -30,9 +30,9 @@ broadcastSchema.index({ leaveScheduledFor: 1 });
 
 export const Broadcast = model<IBroadcast>('Broadcast', broadcastSchema);
 
-// Check if user has received broadcast before (globally)
-export async function hasReceivedBroadcast(userId: string): Promise<boolean> {
-  const record = await Broadcast.findOne({ userId });
+// Check if user has received broadcast in a specific server
+export async function hasReceivedBroadcast(userId: string, guildId: string): Promise<boolean> {
+  const record = await Broadcast.findOne({ userId, guildId });
   return !!record;
 }
 
